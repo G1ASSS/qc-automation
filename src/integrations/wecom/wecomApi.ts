@@ -45,3 +45,56 @@ export async function sendWecomMessage(toUser: string, content: string): Promise
 export function isWecomConfigured(): boolean {
   return Boolean(config.wecomCorpId && config.wecomAgentId && config.wecomSecret && config.wecomToken && config.wecomAesKey);
 }
+
+/** Build the WeCom-group summary for a saved QC report (robot markdown). */
+export function buildRobotMarkdown(d: {
+  inspectionDate: string;
+  factory: string;
+  process: string | null;
+  jobNumber: string;
+  machineNumber: string | null;
+  inspectionTime: string | null;
+  qcResult: string | null;
+  status: string | null;
+  defectRemark?: string | null;
+}): string {
+  const displayDate = d.inspectionDate.split('-').reverse().join('/');
+  const ok = (d.qcResult ?? '').toUpperCase() === 'OK';
+  return [
+    `## ${ok ? '✅' : '❌'} QC Report — ${d.jobNumber}`,
+    `Date: ${displayDate}`,
+    `Factory: ${d.factory}`,
+    `Process: ${d.process ?? '-'}`,
+    `Machine: ${d.machineNumber ?? '-'}`,
+    `Time: ${d.inspectionTime ?? '-'}`,
+    `QC Result: ${d.qcResult ?? '-'}`,
+    `Status: ${d.status ?? '-'}`,
+    `Defect: ${d.defectRemark ?? '-'}`,
+  ].join('\n');
+}
+
+/**
+ * Push a text summary to a WeCom group robot (outbound POST — no domain
+ * filing needed, unlike app callbacks). Never throws; no-op when unconfigured.
+ */
+export async function sendWecomRobotMessage(content: string): Promise<boolean> {
+  const key = config.wecomRobotKey;
+  if (!key) return false;
+  try {
+    const res = await fetch(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ msgtype: 'markdown', markdown: { content } }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = (await res.json().catch(() => ({}))) as { errcode?: number; errmsg?: string };
+    if (!res.ok || (data.errcode !== undefined && data.errcode !== 0)) {
+      logger.error({ errcode: data.errcode, errmsg: (data.errmsg ?? '').slice(0, 300) }, 'WeCom robot push failed');
+      return false;
+    }
+    return true;
+  } catch (err) {
+    logger.error({ err }, 'WeCom robot push error');
+    return false;
+  }
+}

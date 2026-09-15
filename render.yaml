@@ -44,6 +44,8 @@ services:
         sync: false
       - key: WECOM_AES_KEY
         sync: false
+      - key: WECOM_ROBOT_KEY
+        sync: false
 
 databases:
   - name: qc-postgres

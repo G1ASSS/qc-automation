@@ -9,6 +9,7 @@ import {
   buildSuccessReply,
   sendTelegramMessage,
 } from '../integrations/telegram/telegramApi.js';
+import { buildRobotMarkdown, sendWecomRobotMessage } from '../integrations/wecom/wecomApi.js';
 import { handleTelegramCommand } from '../services/commandService.js';
 import { chatAllowlistLog } from '../middleware/security.js';
 import { logger } from '../config/logger.js';
@@ -143,6 +144,8 @@ export async function telegramWebhookHandler(req: Request, res: Response): Promi
     const rec = record as { id: string };
     enqueueSheetSync(rec.id);
     await sendTelegramMessage(chatId, buildSuccessReply(zod.data));
+    // Mirror to WeCom group (fire-and-forget; no-op when robot key unset).
+    void sendWecomRobotMessage(buildRobotMarkdown(zod.data));
     res.status(200).json({ ok: true, saved: true, id: rec.id });
   } catch (err) {
     // Never crash on one malformed message; always ack Telegram to avoid retry storms.

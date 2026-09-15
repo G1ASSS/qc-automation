@@ -79,6 +79,9 @@ export const config = {
   get wecomAesKey(): string | undefined {
     return process.env.WECOM_AES_KEY || undefined;
   },
+  get wecomRobotKey(): string | undefined {
+    return process.env.WECOM_ROBOT_KEY || undefined;
+  },
 };
 
 export function isChatAllowed(chatId: string | number): boolean {

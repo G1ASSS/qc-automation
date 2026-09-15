@@ -36,3 +36,22 @@ describe('wecom crypto', () => {
     expect(wecomXmlField('<xml></xml>', 'Missing')).toBeNull();
   });
 });
+
+import { buildRobotMarkdown, sendWecomRobotMessage } from '../../src/integrations/wecom/wecomApi.js';
+
+describe('wecom group robot', () => {
+  it('builds a markdown summary with defect', () => {
+    const md = buildRobotMarkdown({
+      inspectionDate: '2026-09-15', factory: 'Factory 2', process: 'Row hole',
+      jobNumber: 'TD-HM-014', machineNumber: '23', inspectionTime: '15:03',
+      qcResult: 'NG', status: 'Unfinished', defectRemark: 'scratch 5pcs',
+    });
+    expect(md).toContain('TD-HM-014');
+    expect(md).toContain('scratch 5pcs');
+    expect(md).toContain('NG');
+  });
+
+  it('no-ops when robot key is unset', async () => {
+    await expect(sendWecomRobotMessage('hi')).resolves.toBe(false);
+  });
+});
