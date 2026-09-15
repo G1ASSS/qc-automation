@@ -188,4 +188,27 @@ Machine No:    23
     expect(r.data.originalStatus?.toLowerCase().replace('.', '')).toBe('unfinished');
     expect(r.data.status).toBe('Unfinished');
   });
+
+  it('19. extracts Defect/Remark lines', () => {
+    const r = parseQCMessage(`IPQC Random Inspection 15/09/2026\nFactory 2 Row hole\nJob Number: TD-HM-014\nMachine No: 23\nQC check 100%=1pc.\nQC check NG.\nDefect: scratch 5pcs`);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.qcResult).toBe('NG');
+    expect(r.data.defectRemark).toBe('scratch 5pcs');
+  });
+
+  it('20. extracts NG free-text detail', () => {
+    const r = parseQCMessage(`IPQC Random Inspection 15/09/2026\nFactory 2 Row hole\nJob Number: TD-HM-014\nMachine No: 23\nQC check 100%=1pc.\nNG scratch on surface`);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.qcResult).toBe('NG');
+    expect(r.data.defectRemark).toBe('scratch on surface');
+  });
+
+  it('21. defect is null when not given', () => {
+    const r = parseQCMessage(`IPQC Random Inspection 15/09/2026\nFactory 2 Row hole\nJob Number: TD-HM-014\nMachine No: 23\nQC check Ok.`);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.defectRemark).toBeNull();
+  });
 });

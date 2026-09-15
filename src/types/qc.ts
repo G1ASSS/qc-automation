@@ -14,6 +14,8 @@ export interface ParsedQCData {
   qcCheck: string | null;
   /** Normalized: OK / NG / ... (uppercase for short codes, capitalized otherwise) */
   qcResult: string | null;
+  /** Free-form NG defect / remark, e.g. "scratch 5pcs" (null when not given) */
+  defectRemark: string | null;
   /** Normalized status label */
   status: string | null;
   /** Raw status text as found (no emoji), preserved for audit */

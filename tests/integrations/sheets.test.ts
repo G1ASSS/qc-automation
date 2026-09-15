@@ -3,10 +3,10 @@ import { SHEET_HEADERS, toSheetValues } from '../../src/integrations/google-shee
 import { formatBangkok, formatDateForDisplay } from '../../src/utils/timezone.js';
 
 describe('sheets mapping', () => {
-  it('has the 13 required columns in order', () => {
+  it('has the 14 required columns in order', () => {
     expect([...SHEET_HEADERS]).toEqual([
       'Date', 'Inspection Type', 'Factory', 'Process', 'Job Number', 'Number',
-      'Machine No', 'Time', 'QC Check', 'QC Result', 'Status', 'Telegram User', 'Received At',
+      'Machine No', 'Time', 'QC Check', 'QC Result', 'Status', 'Telegram User', 'Received At', 'Defect / Remark',
     ]);
   });
 
@@ -25,6 +25,7 @@ describe('sheets mapping', () => {
       status: 'Unfinished',
       telegramUsername: 'qc_user',
       receivedAt: new Date('2026-09-15T08:03:00.000Z'),
+      defectRemark: 'scratch 5pcs',
     });
     expect(values).toHaveLength(1);
     const row = values[0] as unknown[];
@@ -33,6 +34,7 @@ describe('sheets mapping', () => {
       'IPQC Random Inspection', 'Factory 2', 'Row hole', 'TD-HM-014', 4, '23', '15:03', '100%=1pc.', 'OK', 'Unfinished',
     ]);
     expect(row[11]).toBe('@qc_user');
+    expect(row[13]).toBe('scratch 5pcs');
   });
 });
 

@@ -37,6 +37,7 @@ export async function syncOneRecordToSheets(id: string): Promise<void> {
         inspectionTime: rec.inspectionTime,
         qcCheck: rec.qcCheck,
         qcResult: rec.qcResult,
+        defectRemark: rec.defectRemark,
         status: rec.status,
         telegramUsername: rec.telegramUsername,
         receivedAt: rec.receivedAt,

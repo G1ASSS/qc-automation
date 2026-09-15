@@ -14,6 +14,7 @@ describe('validators', () => {
       inspectionTime: '15:03',
       qcCheck: '100%=1pc.',
       qcResult: 'OK',
+      defectRemark: null,
       status: 'Unfinished',
       originalStatus: 'unfinished',
     });

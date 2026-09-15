@@ -28,6 +28,7 @@ model QcInspection {
   inspectionTime   String?  @map("inspection_time")
   qcCheck          String?  @map("qc_check")
   qcResult         String?  @map("qc_result")
+  defectRemark     String?  @map("defect_remark")
   status           String?
   originalStatus   String?  @map("original_status")
   originalMessage  String   @map("original_message") @db.Text

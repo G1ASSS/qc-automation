@@ -24,6 +24,7 @@ const HEADERS = [
   'Status',
   'Telegram User',
   'Received At',
+  'Defect / Remark',
 ];
 
 export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workbook> {
@@ -64,6 +65,7 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
     { header: HEADERS[10], key: 'status', width: 12 },
     { header: HEADERS[11], key: 'user', width: 16 },
     { header: HEADERS[12], key: 'received', width: 18 },
+    { header: HEADERS[13], key: 'defect', width: 22 },
   ];
 
   const headerRow = ws.getRow(1);
@@ -87,6 +89,7 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
       qcResult: r.qcResult ?? '',
       status: r.status ?? '',
       user: r.telegramUsername ? `@${r.telegramUsername}` : '',
+      defect: r.defectRemark ?? '',
       received: new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Bangkok',
         day: '2-digit',
@@ -99,7 +102,7 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
     });
   }
 
-  ws.autoFilter = { from: 'A1', to: 'M1' };
+  ws.autoFilter = { from: 'A1', to: 'N1' };
   ws.views = [{ state: 'frozen', ySplit: 1 }];
 
   // Borders + alignment for all data cells

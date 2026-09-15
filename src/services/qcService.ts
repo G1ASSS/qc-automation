@@ -28,6 +28,7 @@ export async function createQcInspection(input: CreateQcInput): Promise<{ record
         inspectionTime: input.inspectionTime,
         qcCheck: input.qcCheck,
         qcResult: input.qcResult,
+        defectRemark: input.defectRemark,
         status: input.status,
         originalStatus: input.originalStatus,
         originalMessage: input.originalMessage,

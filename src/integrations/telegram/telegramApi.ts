@@ -38,6 +38,7 @@ export function buildSuccessReply(d: {
   inspectionTime: string | null;
   qcResult: string | null;
   status: string | null;
+  defectRemark?: string | null;
 }): string {
   const displayDate = d.inspectionDate.split('-').reverse().join('/');
   return [
@@ -51,6 +52,7 @@ export function buildSuccessReply(d: {
     `Time: ${d.inspectionTime ?? '-'}`,
     `QC Result: ${d.qcResult ?? '-'}`,
     `Status: ${d.status ?? '-'}`,
+    `Defect: ${d.defectRemark ?? '-'}`,
   ].join('\n');
 }
 

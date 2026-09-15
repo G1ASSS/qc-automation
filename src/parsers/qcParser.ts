@@ -270,6 +270,37 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
 
+  // ---------- Defect / remark (NG detail, free-form) ----------
+  // Accepts: "Defect: scratch 5pcs", "Remark: ...", "Problem: ...", "Issue: ...",
+  // "Reason: ...", "NG: scratch", "NG scratch 5pcs", "QC check NG scratch".
+  let defectRemark: string | null = null;
+  for (const line of cleaned) {
+    if (/qc\s*check/i.test(line)) {
+      const qm = /qc\s*check\s*[:=\-]?\s*ng\s*[:,\-.]*\s*(.+)/i.exec(line);
+      if (qm) {
+        const val = stripTrailingPeriod(normalizeSpaces(qm[1].trim()));
+        if (val && !/^(ok|ng|pass|fail|good|bad)$/i.test(val) && !defectRemark) defectRemark = val;
+      }
+      continue;
+    }
+    let m = /^(?:defects?|remarks?|problems?|issues?|reasons?|ng\s*(?:reason|problem|remark|defect)?)\s*[:=\-.,]+\s*(.+)/i.exec(line);
+    if (m) {
+      const val = stripTrailingPeriod(normalizeSpaces(m[1].trim()));
+      if (val && !defectRemark) {
+        defectRemark = val;
+        if (!qcResult && /^ng\b/i.test(line)) qcResult = 'NG';
+        continue;
+      }
+    }
+    m = /^ng\s+([^\s].*)/i.exec(line);
+    if (m) {
+      const val = stripTrailingPeriod(normalizeSpaces(m[1].replace(/^[:=\-.,]+\s*/, '').trim()));
+      if (val && !defectRemark) defectRemark = val;
+      if (!qcResult) qcResult = 'NG';
+      continue;
+    }
+  }
+
   // ---------- Status ----------
   let status: string | null = null;
   let originalStatus: string | null = null;
@@ -327,6 +358,7 @@ export function parseQCMessage(message: string): ParseResult {
     inspectionTime,
     qcCheck,
     qcResult,
+    defectRemark,
     status,
     originalStatus,
   };

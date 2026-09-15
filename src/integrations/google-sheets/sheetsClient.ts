@@ -16,6 +16,7 @@ export const SHEET_HEADERS = [
   'Status',
   'Telegram User',
   'Received At',
+  'Defect / Remark',
 ] as const;
 
 let cachedSheets: sheets_v4.Sheets | null = null;
@@ -85,6 +86,7 @@ export interface SheetRowInput {
   status: string | null;
   telegramUsername: string | null;
   receivedAt: Date;
+  defectRemark: string | null;
 }
 
 export function toSheetValues(input: SheetRowInput): unknown[][] {
@@ -112,6 +114,7 @@ export function toSheetValues(input: SheetRowInput): unknown[][] {
       input.status ?? '',
       input.telegramUsername ? `@${input.telegramUsername}` : '',
       received,
+      input.defectRemark ?? '',
     ],
   ];
 }
@@ -121,13 +124,13 @@ export async function ensureHeaderRow(): Promise<void> {
   const sheetId = config.googleSheetId;
   if (!sheets || !sheetId) return;
   const tab = config.googleSheetTab;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: `${tab}!A1:M1` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: `${tab}!A1:N1` });
   const firstRow = res.data.values?.[0] as string[] | undefined;
   const expected = [...SHEET_HEADERS];
   if (!firstRow || firstRow.join('|') !== expected.join('|')) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `${tab}!A1:M1`,
+      range: `${tab}!A1:N1`,
       valueInputOption: 'RAW',
       requestBody: { values: [expected] },
     });
@@ -148,7 +151,7 @@ export async function appendSheetRow(input: SheetRowInput): Promise<number | nul
   const tab = config.googleSheetTab;
   const res = await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
-    range: `${tab}!A:M`,
+    range: `${tab}!A:N`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: toSheetValues(input) as string[][] },
