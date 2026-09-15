@@ -63,6 +63,22 @@ export const config = {
   get sheetsBaseDelayMs(): number {
     return Number(process.env.SHEETS_BASE_DELAY_MS ?? 1000);
   },
+  get wecomCorpId(): string | undefined {
+    return process.env.WECOM_CORP_ID || undefined;
+  },
+  get wecomAgentId(): number | undefined {
+    const v = process.env.WECOM_AGENT_ID;
+    return v ? Number(v) : undefined;
+  },
+  get wecomSecret(): string | undefined {
+    return process.env.WECOM_SECRET || undefined;
+  },
+  get wecomToken(): string | undefined {
+    return process.env.WECOM_TOKEN || undefined;
+  },
+  get wecomAesKey(): string | undefined {
+    return process.env.WECOM_AES_KEY || undefined;
+  },
 };
 
 export function isChatAllowed(chatId: string | number): boolean {

@@ -34,6 +34,16 @@ services:
         sync: false
       - key: LOG_LEVEL
         value: info
+      - key: WECOM_CORP_ID
+        sync: false
+      - key: WECOM_AGENT_ID
+        sync: false
+      - key: WECOM_SECRET
+        sync: false
+      - key: WECOM_TOKEN
+        sync: false
+      - key: WECOM_AES_KEY
+        sync: false
 
 databases:
   - name: qc-postgres
