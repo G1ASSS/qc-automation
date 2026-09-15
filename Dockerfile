@@ -8,6 +8,8 @@ COPY prisma ./prisma
 RUN npm ci --ignore-scripts || npm install --ignore-scripts
 
 FROM base AS builder
+ARG DATABASE_URL=postgresql://qc_user:dummy@localhost:5432/qc_reports?schema=public
+ENV DATABASE_URL=$DATABASE_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
