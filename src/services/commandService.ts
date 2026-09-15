@@ -4,7 +4,7 @@ import { config } from '../config/env.js';
 import { checkDatabase } from '../database/prisma.js';
 import { isSheetsConfigured } from '../integrations/google-sheets/sheetsClient.js';
 import { sendTelegramMessage } from '../integrations/telegram/telegramApi.js';
-import { getTodayStats } from './qcService.js';
+import { getTodayStats, serializeQcRow } from './qcService.js';
 import { todayBangkokISO } from '../utils/timezone.js';
 
 const HELP_TEXT = [
@@ -96,11 +96,12 @@ export async function getDashboardStats(): Promise<{
   failedMessages: number;
 }> {
   const today = await getTodayStats(todayBangkokISO());
-  const [recent, pendingSync, failedSync, failedMessages] = await Promise.all([
+  const [recentRaw, pendingSync, failedSync, failedMessages] = await Promise.all([
     prisma.qcInspection.findMany({ orderBy: { createdAt: 'desc' }, take: 20 }),
     prisma.qcInspection.count({ where: { sheetSyncStatus: 'PENDING' } }),
     prisma.qcInspection.count({ where: { sheetSyncStatus: 'FAILED' } }),
     prisma.failedMessage.count({ where: { resolved: false } }),
   ]);
+  const recent = (recentRaw as unknown as Record<string, unknown>[]).map(serializeQcRow);
   return { today, recent, pendingSync, failedSync, failedMessages };
 }
