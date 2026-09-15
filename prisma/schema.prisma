@@ -1,0 +1,80 @@
+// Prisma schema for QC Telegram → Excel automation.
+// Source of truth: the Telegram message is always preserved (originalMessage).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SheetSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+}
+
+model QcInspection {
+  id               String   @id @default(cuid())
+  inspectionDate   DateTime @map("inspection_date") @db.Date
+  inspectionType   String   @map("inspection_type")
+  factory          String
+  process          String?
+  jobNumber        String   @map("job_number")
+  number           Int?
+  machineNumber    String?  @map("machine_number")
+  inspectionTime   String?  @map("inspection_time")
+  qcCheck          String?  @map("qc_check")
+  qcResult         String?  @map("qc_result")
+  status           String?
+  originalStatus   String?  @map("original_status")
+  originalMessage  String   @map("original_message") @db.Text
+
+  telegramMessageId Int     @map("telegram_message_id")
+  telegramChatId    BigInt  @map("telegram_chat_id")
+  telegramUserId    BigInt? @map("telegram_user_id")
+  telegramUsername  String? @map("telegram_username")
+  receivedAt        DateTime @default(now()) @map("received_at") @db.Timestamptz
+
+  sheetSyncStatus String    @default("PENDING") @map("sheet_sync_status")
+  sheetRowNumber  Int?      @map("sheet_row_number")
+  sheetSyncedAt   DateTime? @map("sheet_synced_at") @db.Timestamptz
+  sheetSyncError  String?   @map("sheet_sync_error") @db.Text
+  retryCount      Int       @default(0) @map("retry_count")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([telegramChatId, telegramMessageId], name: "uq_telegram_chat_message")
+  @@index([inspectionDate], name: "idx_qc_inspection_date")
+  @@index([factory], name: "idx_qc_factory")
+  @@index([jobNumber], name: "idx_qc_job_number")
+  @@index([machineNumber], name: "idx_qc_machine_number")
+  @@index([status], name: "idx_qc_status")
+  @@index([telegramMessageId], name: "idx_qc_telegram_message_id")
+  @@index([sheetSyncStatus], name: "idx_qc_sheet_sync_status")
+  @@map("qc_inspections")
+}
+
+model FailedMessage {
+  id               String   @id @default(cuid())
+  originalMessage  String   @map("original_message") @db.Text
+  telegramMessageId Int?    @map("telegram_message_id")
+  telegramChatId   BigInt?  @map("telegram_chat_id")
+  telegramUserId   BigInt?  @map("telegram_user_id")
+  telegramUsername String?  @map("telegram_username")
+  errorReason      String   @map("error_reason") @db.Text
+  missingFields    String[] @default([]) @map("missing_fields")
+  receivedAt       DateTime @default(now()) @map("received_at") @db.Timestamptz
+  retryCount       Int      @default(0) @map("retry_count")
+  resolved         Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([telegramChatId, telegramMessageId], name: "idx_failed_telegram_ids")
+  @@index([resolved], name: "idx_failed_resolved")
+  @@map("failed_messages")
+}
