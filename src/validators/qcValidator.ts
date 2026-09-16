@@ -15,6 +15,10 @@ export const ParsedQCDataSchema = z.object({
   qcCheck: z.string().max(500).nullable(),
   qcResult: z.string().max(50).nullable(),
   defectRemark: z.string().max(500).nullable(),
+  shift: z.string().max(20).nullable(),
+  inspectionQty: z.number().int().nonnegative().nullable(),
+  foundQty: z.number().int().nonnegative().nullable(),
+  totalNg: z.number().int().nonnegative().nullable(),
   status: z.string().max(50).nullable(),
   originalStatus: z.string().max(50).nullable(),
 });

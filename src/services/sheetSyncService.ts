@@ -1,7 +1,7 @@
 import { prisma } from '../database/prisma.js';
 import { logger } from '../config/logger.js';
 import { config } from '../config/env.js';
-import { appendSheetRow } from '../integrations/google-sheets/sheetsClient.js';
+import { appendSheetRow, tidySheet } from '../integrations/google-sheets/sheetsClient.js';
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -38,6 +38,10 @@ export async function syncOneRecordToSheets(id: string): Promise<void> {
         qcCheck: rec.qcCheck,
         qcResult: rec.qcResult,
         defectRemark: rec.defectRemark,
+        shift: rec.shift,
+        inspectionQty: rec.inspectionQty,
+        foundQty: rec.foundQty,
+        totalNg: rec.totalNg,
         status: rec.status,
         telegramUsername: rec.telegramUsername,
         receivedAt: rec.receivedAt,
@@ -91,6 +95,13 @@ export function startSheetRetryWorker(intervalMs = 60_000): NodeJS.Timeout {
         await syncOneRecordToSheets(rec.id);
       }
       if (pending.length > 0) logger.info({ count: pending.length }, 'Sheet retry worker processed pending rows');
+      // Keep the sheet converged (date order + numeric QC Check) even when
+      // rows arrive from other/older bot instances sharing this spreadsheet.
+      try {
+        await tidySheet();
+      } catch (err) {
+        logger.warn({ err }, 'Periodic sheet tidy failed');
+      }
     } catch (err) {
       logger.error({ err }, 'Sheet retry worker tick failed');
     }

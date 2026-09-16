@@ -39,9 +39,13 @@ export function buildSuccessReply(d: {
   qcResult: string | null;
   status: string | null;
   defectRemark?: string | null;
+  shift?: string | null;
+  inspectionQty?: number | null;
+  foundQty?: number | null;
+  totalNg?: number | null;
 }): string {
   const displayDate = d.inspectionDate.split('-').reverse().join('/');
-  return [
+  const lines = [
     '✅ QC report saved successfully.',
     '',
     `Date: ${displayDate}`,
@@ -53,7 +57,16 @@ export function buildSuccessReply(d: {
     `QC Result: ${d.qcResult ?? '-'}`,
     `Status: ${d.status ?? '-'}`,
     `Defect: ${d.defectRemark ?? '-'}`,
-  ].join('\n');
+  ];
+  if (d.shift ?? d.inspectionQty ?? d.foundQty ?? d.totalNg) {
+    lines.push(
+      `Shift: ${d.shift ?? '-'}`,
+      `Inspection Qty: ${d.inspectionQty ?? '-'}`,
+      `Found Qty: ${d.foundQty ?? '-'}`,
+      `Total NG: ${d.totalNg ?? '-'}`,
+    );
+  }
+  return lines.join('\n');
 }
 
 export function buildFailureReply(missingFields: string[]): string {

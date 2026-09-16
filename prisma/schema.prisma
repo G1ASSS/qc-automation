@@ -29,6 +29,10 @@ model QcInspection {
   qcCheck          String?  @map("qc_check")
   qcResult         String?  @map("qc_result")
   defectRemark     String?  @map("defect_remark")
+  shift            String?
+  inspectionQty    Int?     @map("inspection_qty")
+  foundQty         Int?     @map("found_qty")
+  totalNg          Int?     @map("total_ng")
   status           String?
   originalStatus   String?  @map("original_status")
   originalMessage  String   @map("original_message") @db.Text

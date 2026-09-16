@@ -15,8 +15,35 @@ describe('validators', () => {
       qcCheck: '100%=1pc.',
       qcResult: 'OK',
       defectRemark: null,
+      shift: null,
+      inspectionQty: null,
+      foundQty: null,
+      totalNg: null,
       status: 'Unfinished',
       originalStatus: 'unfinished',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts an NG payload with shift and quantities', () => {
+    const r = ParsedQCDataSchema.safeParse({
+      inspectionDate: '2026-09-15',
+      inspectionType: 'IPQC Random inspection reports have revealed problems',
+      factory: 'Factory 2',
+      process: 'hole line',
+      jobNumber: 'DS-13-JD',
+      number: 5,
+      machineNumber: '18',
+      inspectionTime: '21:39',
+      qcCheck: 'Random Inspection 30pcs; Found 30pcs',
+      qcResult: 'NG',
+      defectRemark: 'Multiple white streaks on the black boards',
+      shift: 'B',
+      inspectionQty: 30,
+      foundQty: 30,
+      totalNg: 400,
+      status: null,
+      originalStatus: null,
     });
     expect(r.success).toBe(true);
   });
@@ -33,6 +60,11 @@ describe('validators', () => {
       inspectionTime: '25:99',
       qcCheck: null,
       qcResult: null,
+      defectRemark: null,
+      shift: null,
+      inspectionQty: null,
+      foundQty: null,
+      totalNg: null,
       status: null,
       originalStatus: null,
     }).success).toBe(false);

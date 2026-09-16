@@ -211,4 +211,65 @@ Machine No:    23
     if (!r.success) return;
     expect(r.data.defectRemark).toBeNull();
   });
+
+  it('22. parses the NG problem-report format', () => {
+    const msg = `🚨 IPQC 15/09/2026Random inspection reports have revealed problems.
+Factory 2  hole line
+⏰ 21:39
+Shift work: (B)
+Job Number: DS-13-JD
+Machine number: 18
+Number: 5
+📌Problems encountered : Multiple white streaks on the black boards.
+Qc Random Inspection: 30 pcs
+Number of jobs found: 30 pcs.
+📌Total NG =400 pcs.
+📌please confirm sir.`;
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-09-15');
+    expect(r.data.factory).toBe('Factory 2');
+    expect(r.data.process).toBe('hole line');
+    expect(r.data.jobNumber).toBe('DS-13-JD');
+    expect(r.data.machineNumber).toBe('18');
+    expect(r.data.number).toBe(5);
+    expect(r.data.inspectionTime).toBe('21:39');
+    expect(r.data.qcResult).toBe('NG');
+    expect(r.data.defectRemark).toBe('Multiple white streaks on the black boards');
+    expect(r.data.shift).toBe('B');
+    expect(r.data.inspectionQty).toBe(30);
+    expect(r.data.foundQty).toBe(30);
+    expect(r.data.totalNg).toBe(400);
+    expect(r.data.qcCheck).toBe('Random Inspection 30pcs; Found 30pcs');
+  });
+
+  it('23. tolerates spacing typos in the NG format', () => {
+    const msg = `IPQC 15/09/ 2026 Random inspection reports have revealed problems
+Factory 2 hole line
+Time: 21 : 39
+Shift work:B
+Job Number:DS-13-JD
+Machine No:18
+Number:5
+Problems encountered:Multiple white streaks
+Total NG=400pcs`;
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.qcResult).toBe('NG');
+    expect(r.data.inspectionTime).toBe('21:39');
+    expect(r.data.shift).toBe('B');
+    expect(r.data.totalNg).toBe(400);
+  });
+
+  it('24. nulls NG fields for the classic OK format', () => {
+    const r = parseQCMessage(SAMPLE);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.shift).toBeNull();
+    expect(r.data.inspectionQty).toBeNull();
+    expect(r.data.foundQty).toBeNull();
+    expect(r.data.totalNg).toBeNull();
+  });
 });
