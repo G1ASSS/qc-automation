@@ -7,7 +7,8 @@ export interface ParsedQCData {
   factory: string;
   process: string | null;
   jobNumber: string;
-  number: number | null;
+  /** Identifier as written, e.g. "00892496" (leading zeros preserved) */
+  number: string | null;
   machineNumber: string | null;
   /** HH:MM (24h) or null */
   inspectionTime: string | null;

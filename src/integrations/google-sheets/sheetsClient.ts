@@ -103,7 +103,7 @@ export interface SheetRowInput {
   factory: string;
   process: string | null;
   jobNumber: string;
-  number: number | null;
+  number: string | null;
   machineNumber: string | null;
   inspectionTime: string | null;
   qcCheck: string | null;
@@ -203,7 +203,8 @@ async function appendInner(input: SheetRowInput): Promise<number | null> {
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
       range: `${tab}!A${n}:T${n}`,
-      valueInputOption: 'USER_ENTERED',
+      // RAW: preserve exact text (e.g. Number "00892496" keeps leading zeros).
+      valueInputOption: 'RAW',
       requestBody: { values },
     });
     logger.info({ rowNumber: n, attempt }, 'Sheets row written at explicit position');

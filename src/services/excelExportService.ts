@@ -183,6 +183,8 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
       }).format(r.receivedAt),
     });
     // Highlight NG rows so problem reports stand out in the export.
+    // Number column as text so leading zeros (e.g. "00892496") survive.
+    row.getCell('number').numFmt = '@';
     if (isNg) {
       row.eachCell((cell) => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4E4' } };

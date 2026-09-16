@@ -220,8 +220,8 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
 
-  // ---------- Number (quantity) ----------
-  let number: number | null = null;
+  // ---------- Number (identifier — keep exact text incl. leading zeros, e.g. "00892496") ----------
+  let number: string | null = null;
   for (const line of cleaned) {
     const low = line.toLowerCase();
     if (low.includes('machine') || low.includes('job')) continue;
@@ -230,7 +230,7 @@ export function parseQCMessage(message: string): ParseResult {
     if (!m) m = /\bqty\b\s*[:=\-]?\s*(\d+)/i.exec(line);
     if (!m) m = /\bquantity\s*[:=\-]?\s*(\d+)/i.exec(line);
     if (m) {
-      number = Number(m[1]);
+      number = m[1];
       break;
     }
   }

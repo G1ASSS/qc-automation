@@ -23,7 +23,7 @@ model QcInspection {
   factory          String
   process          String?
   jobNumber        String   @map("job_number")
-  number           Int?
+  number           String?
   machineNumber    String?  @map("machine_number")
   inspectionTime   String?  @map("inspection_time")
   qcCheck          String?  @map("qc_check")

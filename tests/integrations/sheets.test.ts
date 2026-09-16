@@ -27,7 +27,7 @@ describe('sheets mapping', () => {
       factory: 'Factory 2',
       process: 'Row hole',
       jobNumber: 'TD-HM-014',
-      number: 4,
+      number: '4',
       machineNumber: '23',
       inspectionTime: '15:03',
       qcCheck: '100%=1pc.',
@@ -46,7 +46,7 @@ describe('sheets mapping', () => {
     expect(row[0]).toBe('15/09/2026');
     expect(row.slice(0, 14)).toEqual([
       '15/09/2026',
-      'IPQC Random Inspection', 'Factory 2', 'Row hole', 'TD-HM-014', '', 4, '', 1, '23', 'OK', '15:03', 'Unfinished',
+      'IPQC Random Inspection', 'Factory 2', 'Row hole', 'TD-HM-014', '', '4', '', 1, '23', 'OK', '15:03', 'Unfinished',
       'scratch 5pcs',
     ]);
     expect(row).toHaveLength(20);
@@ -61,7 +61,7 @@ describe('sheets mapping', () => {
       factory: 'Factory 2',
       process: 'hole line',
       jobNumber: 'DS-13-JD',
-      number: 5,
+      number: '5',
       machineNumber: '18',
       inspectionTime: '21:39',
       qcCheck: 'Random Inspection 30pcs; Found 30pcs',

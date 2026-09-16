@@ -6,7 +6,7 @@ export const ParsedQCDataSchema = z.object({
   factory: z.string().min(1).max(100),
   process: z.string().max(200).nullable(),
   jobNumber: z.string().min(1).max(100),
-  number: z.number().int().nonnegative().nullable(),
+  number: z.string().max(50).nullable(),
   machineNumber: z.string().max(50).nullable(),
   inspectionTime: z
     .string()

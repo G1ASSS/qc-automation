@@ -21,7 +21,7 @@ describe('qcParser', () => {
     expect(r.data.factory).toBe('Factory 2');
     expect(r.data.process).toBe('Row hole');
     expect(r.data.jobNumber).toBe('TD-HM-014');
-    expect(r.data.number).toBe(4);
+    expect(r.data.number).toBe('4');
     expect(r.data.machineNumber).toBe('23');
     expect(r.data.inspectionTime).toBe('15:03');
     expect(r.data.qcCheck).toBe('100%=1pc.');
@@ -233,7 +233,7 @@ Number of jobs found: 30 pcs.
     expect(r.data.process).toBe('hole line');
     expect(r.data.jobNumber).toBe('DS-13-JD');
     expect(r.data.machineNumber).toBe('18');
-    expect(r.data.number).toBe(5);
+    expect(r.data.number).toBe('5');
     expect(r.data.inspectionTime).toBe('21:39');
     expect(r.data.qcResult).toBe('NG');
     expect(r.data.defectRemark).toBe('Multiple white streaks on the black boards');
@@ -271,5 +271,12 @@ Total NG=400pcs`;
     expect(r.data.inspectionQty).toBeNull();
     expect(r.data.foundQty).toBeNull();
     expect(r.data.totalNg).toBeNull();
+  });
+
+  it('25. preserves leading zeros in Number', () => {
+    const r = parseQCMessage(SAMPLE.replace('Number: 4', 'Number: 00892496'));
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.number).toBe('00892496');
   });
 });
