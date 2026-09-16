@@ -9,7 +9,7 @@ export function dashboardHtml(): string {
   :root { color-scheme: light; }
   body { font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; margin: 0; background: #f4f6f9; color: #1a2233; }
   header { background: #1f4e79; color: #fff; padding: 16px 24px; }
-  main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+  main { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
   .card { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .card h3 { margin: 0 0 6px; font-size: 13px; color: #5b6b82; text-transform: uppercase; letter-spacing: .04em; }
@@ -18,9 +18,11 @@ export function dashboardHtml(): string {
   input, select, button { padding: 8px 10px; border-radius: 8px; border: 1px solid #c9d3e0; font-size: 14px; }
   button { background: #1f4e79; color: #fff; cursor: pointer; border: none; }
   button.secondary { background: #fff; color: #1f4e79; border: 1px solid #1f4e79; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+  table { width: 100%; min-width: 1500px; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
   th, td { padding: 8px 10px; border-bottom: 1px solid #e8edf3; text-align: left; font-size: 13px; }
   th { background: #eaf0f7; }
+  th.blank, td.blank { background: #f4f6f9; min-width: 12px; }
+  .twrap { overflow-x: auto; border-radius: 10px; }
   #err { color: #b00020; }
 </style>
 </head>
@@ -38,9 +40,9 @@ export function dashboardHtml(): string {
     <button id="btn-export" class="secondary">Export .xlsx</button>
   </div>
   <div id="err"></div>
-  <table><thead><tr>
-    <th>Date</th><th>Type</th><th>Factory</th><th>Process</th><th>Job</th><th>No</th><th>Machine</th><th>Time</th><th>QC Check</th><th>Result</th><th>Status</th><th>Sync</th>
-  </tr></thead><tbody id="rows"></tbody></table>
+  <div class="twrap"><table><thead><tr>
+    <th>Date</th><th>Inspection Type</th><th>Factory</th><th>Process</th><th>Job Number</th><th class="blank"></th><th>Number</th><th class="blank"></th><th>QC Check</th><th>Machine No</th><th>QC Result</th><th>Time</th><th>Status</th><th>Defect / Remark</th><th>Inspection Qty</th><th>Found Qty</th><th>Total NG</th><th>Shift</th><th>Telegram User</th><th>Received At</th><th>Sync</th>
+  </tr></thead><tbody id="rows"></tbody></table></div>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -67,10 +69,12 @@ async function loadRows() {
   try {
     const r = await fetch('/api/qc?' + qs()).then(r => r.json());
     $('rows').innerHTML = (r.data || []).map(x =>
-      '<tr><td>'+esc(fmtDate(x.inspectionDate))+'</td><td>'+esc(x.inspectionType)+'</td><td>'+esc(x.factory)+'</td><td>'+esc(x.process||'')+'</td><td>'+esc(x.jobNumber)+'</td><td>'+esc(x.number??'')+'</td><td>'+esc(x.machineNumber||'')+'</td><td>'+esc(x.inspectionTime||'')+'</td><td>'+esc(x.qcCheck||'')+'</td><td>'+esc(x.qcResult||'')+'</td><td>'+esc(x.status||'')+'</td><td>'+esc(x.sheetSyncStatus||'')+'</td></tr>'
+      '<tr><td>'+esc(fmtDate(x.inspectionDate))+'</td><td>'+esc(x.inspectionType)+'</td><td>'+esc(x.factory)+'</td><td>'+esc(x.process||'')+'</td><td>'+esc(x.jobNumber)+'</td><td class="blank"></td><td>'+esc(x.number??'')+'</td><td class="blank"></td><td>'+esc(qcDisp(x.qcCheck))+'</td><td>'+esc(x.machineNumber||'')+'</td><td>'+esc(x.qcResult||'')+'</td><td>'+esc(x.inspectionTime||'')+'</td><td>'+esc(x.status||'')+'</td><td>'+esc(x.defectRemark||'')+'</td><td>'+esc(x.inspectionQty??'')+'</td><td>'+esc(x.foundQty??'')+'</td><td>'+esc(x.totalNg??'')+'</td><td>'+esc(x.shift||'')+'</td><td>'+esc(x.telegramUsername?('@'+x.telegramUsername):'')+'</td><td>'+esc(fmtDT(x.receivedAt))+'</td><td>'+esc(x.sheetSyncStatus||'')+'</td></tr>'
     ).join('');
   } catch (e) { $('err').textContent = 'Failed to load rows'; }
 }
+function qcDisp(v) { if (v == null || v === '') return ''; const m = /(\d+)\s*pcs?\.?/i.exec(String(v)); if (m) return m[1]; const t = String(v).trim(); if (/^\d+$/.test(t)) return t; return v; }
+function fmtDT(iso) { try { const d = new Date(iso); const p = (n) => String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+', '+p(d.getHours())+':'+p(d.getMinutes()); } catch { return iso; } }
 function fmtDate(iso) { try { return iso.slice(0,10).split('-').reverse().join('/'); } catch { return iso; } }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 $('btn-search').onclick = loadRows;
