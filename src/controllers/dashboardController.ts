@@ -190,7 +190,6 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 .reveal.in{opacity:1;transform:none;transition:opacity .6s,transform .65s var(--ease)}
 @media(max-width:1120px){.kpis{grid-template-columns:repeat(3,1fr)}.filters{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
 @media(max-width:860px){
-  .nav{display:flex}
   .tscroll table{display:none}.cards{display:grid}
   .filters{grid-template-columns:1fr 1fr}
   .toolbar{top:76px}
@@ -247,6 +246,15 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 .fchips button:hover{transform:scale(1.05);border-color:var(--bad)}
 .fchips button span{opacity:.6}
 tbody tr:nth-child(even){background:rgba(148,178,255,.05)}
+.findrow{display:grid;grid-template-columns:1fr 170px auto auto;gap:8px}
+.find-main{border-width:1.5px;border-radius:15px}
+.adv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.adv.hide{display:none}
+.toolbar.console .field{background:rgba(2,6,18,.45);border-radius:12px}
+[data-theme="light"] .toolbar.console .field{background:rgba(255,255,255,.7)}
+#btn-adv.on{background:linear-gradient(135deg,rgba(59,130,246,.7),rgba(139,92,246,.7));color:#fff;border-color:rgba(255,255,255,.35)}
+@media(max-width:860px){.findrow{grid-template-columns:1fr 1fr}.adv{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.findrow{grid-template-columns:1fr}.adv{grid-template-columns:1fr}}
 tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--brand)}
 thead th{background:color-mix(in srgb,var(--card-solid) 88%,transparent);border-bottom:2px solid transparent;border-image:linear-gradient(90deg,var(--brand),var(--brand2),var(--teal)) 1}
 .rcard-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:10px;margin-bottom:4px;border-bottom:1px dashed var(--line2)}
@@ -279,6 +287,7 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <symbol id="i-rows" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
 <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
 <symbol id="i-txt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8h10M18 8h2M4 16h4M12 16h8"/><circle cx="16" cy="8" r="2"/><circle cx="10" cy="16" r="2"/></symbol>
 <symbol id="i-night" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
 </defs></svg>
 <div class="login-veil" id="login-veil"><div class="login-card" id="login-card"><div class="logo"><svg width="26" height="26"><use href="#i-factory"/></svg></div><h2>QC Pulse sign in</h2><p>Enter your Telegram username.<br />You will only see your own inspections and summaries.</p><label class="login-input"><svg width="17" height="17"><use href="#i-search"/></svg><input id="login-name" placeholder="e.g. G1ASS" autocomplete="username" /></label><div class="login-err" id="login-err">Username not found in reports. Check spelling (without @ also works).</div><button class="gbtn primary" id="btn-login">Sign in as QC</button><button class="login-mgr" id="btn-mgr">Manager - view all QCs</button></div></div>
@@ -305,11 +314,12 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <div class="hero-meta"><span class="chip"><svg width="14" height="14"><use href="#i-cal"/></svg><span id="hero-date">—</span></span><span class="chip"><svg width="14" height="14"><use href="#i-sync"/></svg><span id="hero-sync">Sheets: —</span></span><span class="chip"><svg width="14" height="14"><use href="#i-grid"/></svg><span id="hero-total">— records</span></span></div></div>
 <div class="hero-actions"><button class="gbtn primary" id="btn-refresh"><svg width="16" height="16"><use href="#i-sync"/></svg>Refresh</button><button class="gbtn" id="btn-export"><svg width="16" height="16"><use href="#i-dl"/></svg>Export .xlsx</button></div>
 </div></section>
-<section class="kpis" id="kpis" aria-live="polite"></section>
 <section class="grid2 reveal">
 <div class="panel"><h3>Inspection trend</h3><p class="desc">Volume per inspection day (from loaded records, animated)</p><div class="bars" id="bars"></div></div>
 <div class="panel"><h3>Quality split</h3><p class="desc">OK vs NG vs pending result</p><div class="donut-wrap"><svg id="donut" width="150" height="150" viewBox="0 0 42 42" role="img" aria-label="Quality split"></svg><div class="legend" id="legend"></div></div></div>
 </section>
+<section class="kpis" id="kpis" aria-live="polite"></section>
+
 <section class="panel reveal report" id="sec-summary" style="margin:0 0 13px">
 <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
 <div style="min-width:220px;flex:1"><div class="overline">Factory report</div><h3>Daily work summary — what QC did today</h3><p class="desc" style="margin:2px 0 0">Cutting / Border / Hole / Cleaning / Packing / Special + problems + totals. Same factory format. Night = picked date 20:00 to next day 08:00. Toggle auto-picks the active night.</p></div>
@@ -324,15 +334,19 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <div class="msgcap"><span>Factory message preview</span></div>
 <pre class="sum-pre report-pre" id="sum-text">Tap Generate — defaults to today (Bangkok).</pre>
 </section>
-<section class="toolbar reveal" id="sec-records"><div class="filters">
+<section class="toolbar reveal console" id="sec-records"><div class="overline">Records console</div><div class="findrow">
+<label class="field find-main"><svg width="16" height="16"><use href="#i-search"/></svg><input id="f-job" placeholder="Job number — e.g. CT-141" aria-label="Job number" /></label>
 <label class="field"><svg width="16" height="16"><use href="#i-cal"/></svg><input id="f-date" type="date" aria-label="Date" /></label>
+<button class="gbtn" id="btn-adv"><svg width="16" height="16"><use href="#i-sliders"/></svg>Filters</button>
+<button class="gbtn primary" id="btn-search"><svg width="16" height="16"><use href="#i-search"/></svg>Search</button>
+</div>
+<div class="adv" id="advfilters">
 <label class="field"><svg width="16" height="16"><use href="#i-factory"/></svg><input id="f-factory" placeholder="Factory — e.g. Factory 2" aria-label="Factory" /></label>
-<label class="field"><svg width="16" height="16"><use href="#i-search"/></svg><input id="f-job" placeholder="Job number — e.g. CT-141" aria-label="Job number" /></label>
 <label class="field"><svg width="16" height="16"><use href="#i-grid"/></svg><input id="f-machine" placeholder="Machine No" aria-label="Machine" /></label>
 <label class="field"><svg width="16" height="16"><use href="#i-grid"/></svg><input id="f-user" placeholder="QC user - e.g. G1ASS" aria-label="QC user" /></label>
 <label class="field"><svg width="16" height="16"><use href="#i-clock"/></svg><select id="f-shift" aria-label="Shift"><option value="">All shifts</option><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option><option value="N">Night</option></select></label>
 <label class="field"><svg width="16" height="16"><use href="#i-alert"/></svg><select id="f-status" aria-label="Status"><option value="">All statuses</option><option value="Unfinished">Unfinished</option><option>OK</option><option>NG</option></select></label>
-<div class="actions"><button class="gbtn primary" id="btn-search"><svg width="16" height="16"><use href="#i-search"/></svg>Search</button><button class="gbtn" id="btn-reset">Reset</button></div>
+<button class="gbtn" id="btn-reset">Reset</button>
 </div>
 <div class="fchips" id="fchips"></div>
 <div class="seg" role="tablist"><button id="view-table" class="on"><svg width="15" height="15"><use href="#i-grid"/></svg>Table</button><button id="view-cards"><svg width="15" height="15"><use href="#i-inbox"/></svg>Cards</button></div>
@@ -435,6 +449,8 @@ function openModal(i){var x=S.rows[i];if(!x)return;$("m-title").textContent=x.jo
 $("mclose").onclick=function(){$("modal").classList.remove("open")};$("mback").onclick=function(){$("modal").classList.remove("open")};document.addEventListener("keydown",function(e){if(e.key==="Escape")$("modal").classList.remove("open")});
 function doExport(){var q=qsexp();toast("Building Excel…");window.location.href="/api/qc/export.xlsx?"+q}
 $("btn-search").onclick=function(){S.page=0;loadRows()};
+document.getElementById("btn-adv").onclick=function(){var a=document.getElementById("advfilters");var hide=a.classList.toggle("hide");this.classList.toggle("on",!hide)};
+try{if(window.innerWidth<=860)document.getElementById("advfilters").classList.add("hide")}catch(e){};
 $("btn-reset").onclick=function(){$("f-date").value="";$("f-factory").value="";$("f-job").value="";$("f-machine").value="";if(!effUser())$("f-user").value="";$("f-shift").value="";$("f-status").value="";S.page=0;loadRows()};
 $("btn-export").onclick=doExport;$("btn-export2").onclick=doExport;$("btn-export-top").onclick=doExport;
 $("btn-refresh").onclick=function(){loadAll();loadRows();toast("Refreshing live data…")};
