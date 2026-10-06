@@ -252,6 +252,9 @@ thead th{background:color-mix(in srgb,var(--card-solid) 88%,transparent);border-
 .rcard-head .rdate{margin-left:auto;font-size:11px;color:var(--muted)}
 .rcallout{margin-top:10px;font-size:12.5px;line-height:1.55;border-radius:11px;padding:9px 11px;border:1px solid rgba(251,113,133,.4);background:rgba(251,113,133,.09)}
 @media(max-width:860px){.tot-strip{grid-template-columns:repeat(3,1fr)}}
+body[data-view="overview"] #sec-summary,body[data-view="overview"] #sec-records,body[data-view="overview"] #records-meta,body[data-view="overview"] section.tablewrap{display:none}
+body[data-view="summary"] #sec-overview,body[data-view="summary"] #kpis,body[data-view="summary"] section.grid2,body[data-view="summary"] #sec-records,body[data-view="summary"] #records-meta,body[data-view="summary"] section.tablewrap{display:none}
+body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[data-view="records"] section.grid2,body[data-view="records"] #sec-summary{display:none}
 </style>
 </head>
 <body>
@@ -333,7 +336,7 @@ thead th{background:color-mix(in srgb,var(--card-solid) 88%,transparent);border-
 <div class="fchips" id="fchips"></div>
 <div class="seg" role="tablist"><button id="view-table" class="on"><svg width="15" height="15"><use href="#i-grid"/></svg>Table</button><button id="view-cards"><svg width="15" height="15"><use href="#i-inbox"/></svg>Cards</button></div>
 </section>
-<div class="meta"><span id="meta-count" class="mono">—</span><span>·</span><span>Tap any row for full Telegram source</span><span class="spacer" style="flex:1"></span><span id="meta-page" class="mono"></span></div>
+<div class="meta" id="records-meta"><span id="meta-count" class="mono">—</span><span>·</span><span>Tap any row for full Telegram source</span><span class="spacer" style="flex:1"></span><span id="meta-page" class="mono"></span></div>
 <section class="tablewrap reveal">
 <div class="tscroll" id="tscroll"><table id="tbl"><thead><tr><th>Date</th><th>Job</th><th>Factory / Process</th><th>Machine</th><th>QC</th><th>Result</th><th>Status</th><th>Remark</th><th>Qty insp/found/NG</th><th>Shift</th><th>Time</th><th>User</th><th>Sync</th></tr></thead><tbody id="rows"></tbody></table><div class="cards" id="mcards"></div><div class="skel" id="skel"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="empty" id="empty" style="display:none"><svg width="42" height="42"><use href="#i-inbox"/></svg><div style="font-weight:800;color:var(--ink)">No inspections match</div><div>Try clearing filters or picking another date.</div></div></div>
 <div class="pager"><button class="gbtn" id="prev">Prev</button><button class="gbtn" id="next">Next</button><span class="mono" id="pageinfo"></span><span style="flex:1"></span><button class="gbtn" id="btn-export2"><svg width="15" height="15"><use href="#i-dl"/></svg>Export filtered .xlsx</button></div>
@@ -466,7 +469,7 @@ document.getElementById("login-name").addEventListener("keydown",function(e){if(
 document.getElementById("btn-mgr").onclick=function(){doLogin("",true)};
 document.getElementById("btn-logout").onclick=function(){try{localStorage.removeItem("qc-user");localStorage.removeItem("qc-mgr")}catch(e){}location.reload()};
 function moveInd(){var a=document.querySelector(".nav a.on");var ind=document.getElementById("nav-ind");if(!a||!ind)return;ind.style.left=a.offsetLeft+"px";ind.style.width=a.offsetWidth+"px"}
-document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(){document.querySelectorAll(".nav a").forEach(function(x){x.classList.remove("on")});a.classList.add("on");moveInd()})});
+document.querySelectorAll(".nav a").forEach(function(a){a.addEventListener("click",function(e){if(e)e.preventDefault();setView(a.getAttribute("data-sec").replace("sec-",""))})});
 window.addEventListener("resize",moveInd);
 if("IntersectionObserver" in window){
   var secIO=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){var id=en.target.id;document.querySelectorAll(".nav a").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-sec")===id)});moveInd()}})},{rootMargin:"-40% 0px -55% 0px"});
@@ -475,10 +478,12 @@ if("IntersectionObserver" in window){
   document.querySelectorAll(".reveal").forEach(function(el){revIO.observe(el)});
 }
 moveInd();
-document.querySelectorAll("#dock button[data-go]").forEach(function(b){b.addEventListener("click",function(){var el=document.getElementById(b.getAttribute("data-go"));if(el)el.scrollIntoView({behavior:"smooth",block:"start"});if(navigator.vibrate){try{navigator.vibrate(8)}catch(e){}}})});
+document.querySelectorAll("#dock button[data-go]").forEach(function(b){b.addEventListener("click",function(){setView(b.getAttribute("data-go").replace("sec-",""));if(navigator.vibrate){try{navigator.vibrate(8)}catch(e){}}})});
 document.getElementById("dock-export").onclick=function(){doExport();if(navigator.vibrate){try{navigator.vibrate(8)}catch(e){}}};
-function dockSync(){var id=null;var secs=["sec-overview","sec-summary","sec-records"];var best=1e9;for(var i=0;i<secs.length;i++){var el=document.getElementById(secs[i]);if(!el)continue;var d=Math.abs(el.getBoundingClientRect().top-120);if(d<best){best=d;id=secs[i]}}document.querySelectorAll("#dock button[data-go]").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-go")===id)})}
+function dockSync(){var v=document.body.getAttribute("data-view");if(v){document.querySelectorAll("#dock button[data-go]").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-go")==="sec-"+v)});return}var id=null;var secs=["sec-overview","sec-summary","sec-records"];var best=1e9;for(var i=0;i<secs.length;i++){var el=document.getElementById(secs[i]);if(!el)continue;var d=Math.abs(el.getBoundingClientRect().top-120);if(d<best){best=d;id=secs[i]}}document.querySelectorAll("#dock button[data-go]").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-go")===id)})}
 var dockT=null;window.addEventListener("scroll",function(){if(dockT)return;dockT=setTimeout(function(){dockT=null;dockSync()},120)},{passive:true});
+function setView(v){if(v!=="overview"&&v!=="summary"&&v!=="records")v="overview";document.body.setAttribute("data-view",v);document.querySelectorAll(".nav a").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-sec")==="sec-"+v)});document.querySelectorAll("#dock button[data-go]").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-go")==="sec-"+v)});moveInd();try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){window.scrollTo(0,0)}if(v==="overview"&&S.all&&S.all.length)renderCharts(S.all);try{if((location.hash||"")!=="#sec-"+v)history.replaceState(null,"","#sec-"+v)}catch(e){}}
+try{var hv=(location.hash||"").replace("#sec-","");setView(hv||"overview")}catch(e){}
 try{document.getElementById("s-date").value=sumToday()}catch(e){}
 if(me()||isMgr()){document.getElementById("login-veil").style.display="none";applyLogin();boot()}
 setInterval(function(){if(me()||isMgr())loadAll()},60000);
