@@ -38,6 +38,7 @@ export interface SummaryUser {
 }
 export interface DailySummary {
   date: string; displayDate: string; total: number;
+  window?: { from: string; to: string };
   lines: Record<LineKey, SummaryJob[]>;
   lineCounts: Record<LineKey, number>;
   problems: SummaryProblem[];
@@ -47,16 +48,63 @@ export interface DailySummary {
   text: string;
 }
 
+type SummaryRows = Awaited<ReturnType<typeof prisma.qcInspection.findMany>>;
+
+function userShiftWhere(username?: string, shift?: string): Record<string, unknown> {
+  const who2 = (username ?? "").trim().replace(/^@/, "");
+  const sh2 = (shift ?? "").trim();
+  return { ...(who2 ? { telegramUsername: { equals: who2, mode: "insensitive" as const } } : {}), ...(sh2 ? { shift: { equals: sh2, mode: "insensitive" as const } } : {}) };
+}
+
 export async function buildDailySummary(isoDate: string, username?: string, shift?: string): Promise<DailySummary> {
   const start = new Date(`${isoDate}T00:00:00.000Z`);
   const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1);
-  const who2 = (username ?? "").trim().replace(/^@/, "");
-  const sh2 = (shift ?? "").trim();
   const rows = await prisma.qcInspection.findMany({
-    where: { inspectionDate: { gte: start, lt: end }, ...(who2 ? { telegramUsername: { equals: who2, mode: "insensitive" as const } } : {}), ...(sh2 ? { shift: { equals: sh2, mode: "insensitive" as const } } : {}) },
+    where: { inspectionDate: { gte: start, lt: end }, ...userShiftWhere(username, shift) },
     orderBy: [{ createdAt: 'asc' }],
     take: 5000,
   });
+  const displayDate = formatDateForDisplay(isoDate);
+  return assembleSummary(rows, `\u2705 SUMMARIES IPQC ${displayDate}`, 'Today have a problem', isoDate, displayDate);
+}
+
+/** Night window: 20:00 on `isoDate` through 08:00 next morning (by inspection time).
+ *  Convention: reports sent after midnight must carry the NEW date to join that night. */
+export async function buildNightSummary(isoDate: string, username?: string, shift?: string): Promise<DailySummary> {
+  const d0 = new Date(`${isoDate}T00:00:00.000Z`);
+  const d1 = new Date(d0); d1.setUTCDate(d1.getUTCDate() + 1);
+  const d2 = new Date(d1); d2.setUTCDate(d2.getUTCDate() + 1);
+  const rows = await prisma.qcInspection.findMany({
+    where: { inspectionDate: { gte: d0, lt: d2 }, ...userShiftWhere(username, shift) },
+    orderBy: [{ createdAt: 'asc' }],
+    take: 10000,
+  });
+  const s0 = isoDate;
+  const s1 = d1.toISOString().slice(0, 10);
+  const pad = (v: string | null): string | null => {
+    if (!v) return null;
+    const m = /^(\d{1,2}):(\d{2})/.exec(v.trim());
+    return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null;
+  };
+  const night = rows.filter((r) => {
+    const day = r.inspectionDate.toISOString().slice(0, 10);
+    const tm = pad(r.inspectionTime);
+    if (!tm) return false; // no time -> cannot place in a night window
+    if (day === s0) return tm >= '20:00';
+    if (day === s1) return tm < '08:00';
+    return false;
+  });
+  night.sort((a, b) =>
+    a.inspectionDate.getTime() - b.inspectionDate.getTime() ||
+    (pad(a.inspectionTime) ?? '').localeCompare(pad(b.inspectionTime) ?? '') ||
+    a.createdAt.getTime() - b.createdAt.getTime());
+  const disp = `${formatDateForDisplay(s0)} 20:00 - ${formatDateForDisplay(s1)} 08:00`;
+  const out = assembleSummary(night, `\uD83C\uDF19 NIGHT SHIFT ${disp}`, 'Tonight have a problem', s0, disp);
+  out.window = { from: `${s0}T20:00`, to: `${s1}T08:00` };
+  return out;
+}
+
+function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: string, date: string, displayDate: string): DailySummary {
 
   const grouped: Record<LineKey, Map<string, string[]>> = {
     cutting: new Map(), border: new Map(), hole: new Map(),
@@ -130,9 +178,8 @@ export async function buildDailySummary(isoDate: string, username?: string, shif
   const unfinished = rows.filter((r) => (r.status ?? '').toLowerCase() === 'unfinished').length;
   const ok = rows.filter((r) => (r.qcResult ?? '').toUpperCase() === 'OK').length;
 
-  const displayDate = formatDateForDisplay(isoDate);
   const L: string[] = [];
-  L.push(`✅ SUMMARIES IPQC ${displayDate}`);
+  L.push(titleLine);
   for (const { key, title } of LINE_META) {
     L.push(title);
     const jobs = lines[key];
@@ -140,7 +187,7 @@ export async function buildDailySummary(isoDate: string, username?: string, shif
     else for (const j of jobs) L.push(`✅${j.jobNumber}(${j.machines.join(',')})`);
   }
   L.push('');
-  L.push('Today have a problem');
+  L.push(problemHeader);
   if (problems.length === 0) { L.push('No problem — all OK ✅'); }
   else for (const p of problems) {
     if (p.shift) L.push(`Shift work (${p.shift})`);
@@ -164,5 +211,5 @@ export async function buildDailySummary(isoDate: string, username?: string, shif
   if (unfinished > 0) L.push(`Unfinished - ${unfinished}`);
   L.push(`Name - ` + byUser.map((u) => '@' + u.username).join(', '));
 
-  return { date: isoDate, displayDate, total: rows.length, lines, lineCounts, problems, byUser, byShift, ng, unfinished, ok, text: L.join('\n') };
+  return { date, displayDate, total: rows.length, lines, lineCounts, problems, byUser, byShift, ng, unfinished, ok, text: L.join('\n') };
 }

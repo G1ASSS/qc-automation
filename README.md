@@ -65,7 +65,7 @@ Run tests: `npm test`. Typecheck: `npm run lint`. Build: `npm run build`.
 - `POST /api/admin/telegram/delete-webhook`
 - `GET /api/admin/stats` / `/api/admin/failed` / `/api/admin/pending-sync`
 
-Telegram commands: `/start /help /status /today /export`.
+Telegram commands: `/start /help /status /today /export /summary /mywork /night` (`/night [date]` = 20:00-08:00 window; after midnight write the new date).
 
 ## Telegram setup
 

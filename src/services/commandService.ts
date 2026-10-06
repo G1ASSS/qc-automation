@@ -19,6 +19,7 @@ const HELP_TEXT = [
   '/today - today\'s QC summary',
   '/export - get the Excel export link',
   '/summary [YYYY-MM-DD] - daily work summary',
+  '/night [YYYY-MM-DD] - night shift window 20:00-08:00',
   '/mywork [YYYY-MM-DD] - your own inspections today (proves what you did)',
   '',
   'Report format example:',
@@ -112,6 +113,20 @@ export async function handleTelegramCommand(opts: {
     } catch (err) {
       logger.error({ err }, 'Failed /mywork');
       await sendTelegramMessage(chatId, 'Could not load your work. Try again later.');
+    }
+    return true;
+  }
+  if (cmd === '/night') {
+    try {
+      const { buildNightSummary } = await import('./summaryService.js');
+      const m = /^\/night(?:@\w+)?\s*(\d{4}-\d{2}-\d{2})?/.exec(command.trim());
+      const date = (m && m[1]) || todayBangkokISO();
+      const s = await buildNightSummary(date);
+      const text = s.text.length > 3900 ? s.text.slice(0, 3900) + '\n...(truncated)' : s.text;
+      await sendTelegramMessage(chatId, text);
+    } catch (err) {
+      logger.error({ err }, 'Failed /night');
+      await sendTelegramMessage(chatId, 'Could not build night summary. Try again later.');
     }
     return true;
   }
