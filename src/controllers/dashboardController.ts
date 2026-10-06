@@ -212,6 +212,46 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 .dock button.on{color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed 60%,#0891b2);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 8px 22px rgba(59,130,246,.55);text-shadow:0 1px 4px rgba(2,6,18,.4)}
 .dock button.on svg{transform:translateY(-1px) scale(1.08)}
 @media(max-width:560px){.dock{gap:2px;padding:7px}.dock button{min-width:60px}}
+.overline{font-size:10.5px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin:0 0 6px}
+.report{position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(45,212,191,.09),var(--glass) 40%);border-top:2px solid rgba(45,212,191,.55)}
+.report::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(45,212,191,.8),transparent)}
+.rep-line{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:9px;background:rgba(2,6,18,.28);transition:transform .2s var(--snap),box-shadow .25s}
+[data-theme="light"] .rep-line{background:rgba(255,255,255,.6)}
+.rep-line:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(2,6,18,.32)}
+.rep-line-h{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.rep-line-h i{width:10px;height:10px;border-radius:50%;flex:none}
+.rep-count{margin-left:auto;font-size:11px;font-weight:900;color:var(--muted);background:var(--glass);border:1px solid var(--line2);border-radius:999px;padding:3px 10px}
+.rep-jobs{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.jobchip{display:inline-flex;align-items:baseline;gap:6px;font-size:12.5px;border-radius:11px;padding:7px 10px;border:1px solid rgba(52,211,153,.4);background:rgba(52,211,153,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);transition:transform .15s var(--snap)}
+.jobchip:hover{transform:scale(1.04)}
+.jobchip b{font-weight:900}
+.jobchip small{color:var(--muted);font-variant-numeric:tabular-nums}
+.rep-empty{color:var(--faint);font-size:12.5px}
+.prob-wrap{display:grid;gap:9px;margin-top:11px}
+.prob-card{border-radius:15px;padding:12px 14px;border:1px solid rgba(251,113,133,.45);background:linear-gradient(180deg,rgba(251,113,133,.13),rgba(251,113,133,.05));box-shadow:inset 3px 0 0 var(--bad),inset 0 1px 0 rgba(255,255,255,.25)}
+.prob-h{font-weight:900;font-size:13.5px}
+.prob-defect{margin-top:5px;font-size:13px;line-height:1.55;color:var(--ink)}
+.prob-meta{margin-top:6px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tot-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:11px}
+.tot-strip>div{border-radius:14px;padding:11px 6px;text-align:center;border:1px solid var(--line2);background:linear-gradient(180deg,var(--glass2),var(--glass));box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.tot-strip b{display:block;font-size:22px;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tot-strip span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tot-strip .bad b{color:var(--bad)}
+.msgcap{display:flex;align-items:center;gap:8px;margin:14px 0 0;font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.msgcap::after{content:"";flex:1;height:1px;background:var(--line2)}
+.report-pre{border-left:3px solid rgba(45,212,191,.6)}
+.fchips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.fchips:empty{display:none}
+.fchips button{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;border-radius:999px;padding:7px 8px 7px 12px;cursor:pointer;color:var(--ink);border:1px solid var(--line2);background:linear-gradient(180deg,var(--glass2),var(--glass));box-shadow:inset 0 1px 0 rgba(255,255,255,.3);transition:transform .15s var(--snap)}
+.fchips button:hover{transform:scale(1.05);border-color:var(--bad)}
+.fchips button span{opacity:.6}
+tbody tr:nth-child(even){background:rgba(148,178,255,.05)}
+tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--brand)}
+thead th{background:color-mix(in srgb,var(--card-solid) 88%,transparent);border-bottom:2px solid transparent;border-image:linear-gradient(90deg,var(--brand),var(--brand2),var(--teal)) 1}
+.rcard-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:10px;margin-bottom:4px;border-bottom:1px dashed var(--line2)}
+.rcard-head .rdate{margin-left:auto;font-size:11px;color:var(--muted)}
+.rcallout{margin-top:10px;font-size:12.5px;line-height:1.55;border-radius:11px;padding:9px 11px;border:1px solid rgba(251,113,133,.4);background:rgba(251,113,133,.09)}
+@media(max-width:860px){.tot-strip{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -266,9 +306,9 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 <div class="panel"><h3>Inspection trend</h3><p class="desc">Volume per inspection day (from loaded records, animated)</p><div class="bars" id="bars"></div></div>
 <div class="panel"><h3>Quality split</h3><p class="desc">OK vs NG vs pending result</p><div class="donut-wrap"><svg id="donut" width="150" height="150" viewBox="0 0 42 42" role="img" aria-label="Quality split"></svg><div class="legend" id="legend"></div></div></div>
 </section>
-<section class="panel reveal" id="sec-summary" style="margin:0 0 13px">
+<section class="panel reveal report" id="sec-summary" style="margin:0 0 13px">
 <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-<div style="min-width:220px;flex:1"><h3>Daily work summary — what QC did today</h3><p class="desc" style="margin:2px 0 0">Cutting / Border / Hole / Cleaning / Packing / Special + problems + totals. Same factory format. Night = picked date 20:00 to next day 08:00. Toggle auto-picks the active night.</p></div>
+<div style="min-width:220px;flex:1"><div class="overline">Factory report</div><h3>Daily work summary — what QC did today</h3><p class="desc" style="margin:2px 0 0">Cutting / Border / Hole / Cleaning / Packing / Special + problems + totals. Same factory format. Night = picked date 20:00 to next day 08:00. Toggle auto-picks the active night.</p></div>
 <label class="field" style="max-width:190px"><svg width="16" height="16"><use href="#i-cal"/></svg><input id="s-date" type="date" aria-label="Summary date" /></label>
 <label class="field" style="max-width:150px"><svg width="16" height="16"><use href="#i-clock"/></svg><select id="s-shift" aria-label="Summary shift"><option value="">All shifts</option><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option><option value="N">Night</option></select></label>
 <button class="gbtn primary" id="btn-sum"><svg width="16" height="16"><use href="#i-grid"/></svg>Generate</button>
@@ -276,8 +316,9 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 <button class="gbtn" id="btn-copy"><svg width="15" height="15"><use href="#i-copy"/></svg>Copy text</button>
 <button class="gbtn" id="btn-sumtxt"><svg width="15" height="15"><use href="#i-txt"/></svg>Open .txt</button>
 </div>
-<div class="sum-grid" id="sum-cards"></div>
-<pre class="sum-pre" id="sum-text">Tap Generate — defaults to today (Bangkok).</pre>
+<div id="sum-cards"></div>
+<div class="msgcap"><span>Factory message preview</span></div>
+<pre class="sum-pre report-pre" id="sum-text">Tap Generate — defaults to today (Bangkok).</pre>
 </section>
 <section class="toolbar reveal" id="sec-records"><div class="filters">
 <label class="field"><svg width="16" height="16"><use href="#i-cal"/></svg><input id="f-date" type="date" aria-label="Date" /></label>
@@ -289,6 +330,7 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 <label class="field"><svg width="16" height="16"><use href="#i-alert"/></svg><select id="f-status" aria-label="Status"><option value="">All statuses</option><option value="Unfinished">Unfinished</option><option>OK</option><option>NG</option></select></label>
 <div class="actions"><button class="gbtn primary" id="btn-search"><svg width="16" height="16"><use href="#i-search"/></svg>Search</button><button class="gbtn" id="btn-reset">Reset</button></div>
 </div>
+<div class="fchips" id="fchips"></div>
 <div class="seg" role="tablist"><button id="view-table" class="on"><svg width="15" height="15"><use href="#i-grid"/></svg>Table</button><button id="view-cards"><svg width="15" height="15"><use href="#i-inbox"/></svg>Cards</button></div>
 </section>
 <div class="meta"><span id="meta-count" class="mono">—</span><span>·</span><span>Tap any row for full Telegram source</span><span class="spacer" style="flex:1"></span><span id="meta-page" class="mono"></span></div>
@@ -359,6 +401,7 @@ function renderCharts(rows){
 function pillResult(r){if(r==="OK")return '<span class="badge b-ok"><svg width="12" height="12"><use href="#i-check"/></svg>OK</span>';if(r==="NG")return '<span class="badge b-ng"><svg width="12" height="12"><use href="#i-x"/></svg>NG</span>';return '<span class="badge b-na">—</span>'}
 function pillStatus(s){if(!s)return '<span style="color:var(--muted)">—</span>';if(String(s).toLowerCase()==="unfinished")return '<span class="badge b-un"><svg width="12" height="12"><use href="#i-clock"/></svg>Unfinished</span>';return '<span class="badge b-na">'+esc(s)+'</span>'}
 function qtyStr(x){if(x.inspectionQty==null&&x.foundQty==null&&x.totalNg==null)return "—";return (x.inspectionQty==null?"—":x.inspectionQty)+"/"+(x.foundQty==null?"—":x.foundQty)+"/"+(x.totalNg==null?"—":x.totalNg)}
+function renderChips(){var defs=[["f-date",""],["f-factory",""],["f-job",""],["f-machine","M "],["f-user","@"],["f-shift",""],["f-status",""]];var h="";for(var i=0;i<defs.length;i++){var el=document.getElementById(defs[i][0]);if(!el||!el.value)continue;var v=(el.tagName==="SELECT")?el.options[el.selectedIndex].text:el.value;h+='<button data-f="'+defs[i][0]+'">'+esc(defs[i][1]+v)+'<span>\u00d7</span></button>'}document.getElementById("fchips").innerHTML=h;var bs=document.querySelectorAll("#fchips button");for(var k=0;k<bs.length;k++){bs[k].onclick=function(){var f=document.getElementById(this.getAttribute("data-f"));if(f){f.value="";S.page=0;loadRows()}}}}
 async function loadRows(){
   $("skel").style.display="grid";$("empty").style.display="none";$("rows").innerHTML="";$("mcards").innerHTML="";
   try{
@@ -371,13 +414,14 @@ async function loadRows(){
       html+='<tr data-i="'+i+'"><td class="mono">'+fmtDate(x.inspectionDate)+'</td><td><span class="job">'+esc(x.jobNumber)+'</span><div style="font-size:11px;color:var(--muted)">'+esc(x.inspectionType||"")+'</div></td><td>'+esc(x.factory)+'<div style="font-size:11px;color:var(--muted)">'+esc(x.process||"")+'</div></td><td class="mono"><b>M'+esc(x.machineNumber||"—")+'</b><div style="font-size:11px;color:var(--muted)">No. '+esc(x.number||"—")+'</div></td><td class="mono">'+esc(x.qcCheck||"—")+'</td><td>'+pillResult(x.qcResult)+'</td><td>'+pillStatus(x.status)+'</td><td>'+(x.defectRemark?'<span class="remark" title="'+esc(x.defectRemark)+'">'+esc(x.defectRemark)+'</span>':'<span style="color:var(--muted)">—</span>')+'</td><td class="mono">'+qtyStr(x)+'</td><td>'+(x.shift?esc(x.shift):"—")+'</td><td class="mono">'+esc(x.inspectionTime||"—")+'</td><td>'+(x.telegramUsername?"@"+esc(x.telegramUsername):"—")+'</td><td><span class="badge b-sync">'+esc(x.sheetSyncStatus||"")+'</span></td></tr>';
     }
     $("rows").innerHTML=html;
-    var mh="";for(var j=0;j<S.rows.length;j++){var y=S.rows[j];mh+='<div class="rcard" data-i="'+j+'"><div class="rcard-top"><span class="job">'+esc(y.jobNumber)+'</span>'+pillResult(y.qcResult)+pillStatus(y.status)+'<span style="flex:1"></span><span class="mono" style="font-size:11px;color:var(--muted)">'+fmtDate(y.inspectionDate)+'</span></div><div class="rcard-grid"><div><b>Factory</b>'+esc(y.factory)+' · '+esc(y.process||"")+'</div><div><b>Machine</b>M'+esc(y.machineNumber||"—")+' · No.'+esc(y.number||"—")+'</div><div><b>Time</b>'+esc(y.inspectionTime||"—")+'</div>'+(((y.inspectionQty!=null||y.foundQty!=null||y.totalNg!=null)?"<div><b>Qty insp/found/NG</b>"+qtyStr(y)+"</div>":"")+((y.shift)?"<div><b>Shift</b>"+esc(y.shift)+"</div>":""))+'<div><b>User</b>'+(y.telegramUsername?"@"+esc(y.telegramUsername):"—")+'</div></div>'+(y.defectRemark?'<div style="margin-top:8px;font-size:12px;border:1px solid var(--line);border-radius:9px;padding:7px 9px">'+esc(y.defectRemark)+'</div>':"")+'</div>'}
-    $("mcards").innerHTML=mh;
+    var mh="";for(var j=0;j<S.rows.length;j++){var y=S.rows[j];
+mh+='<div class="rcard" data-i="'+j+'"><div class="rcard-head"><span class="job">'+esc(y.jobNumber)+'</span>'+pillResult(y.qcResult)+pillStatus(y.status)+'<span class="mono rdate">'+fmtDate(y.inspectionDate)+'</span></div><div class="rcard-grid"><div><b>Factory</b>'+esc(y.factory)+' · '+esc(y.process||"")+'</div><div><b>Machine</b>M'+esc(y.machineNumber||"—")+' · No.'+esc(y.number||"—")+'</div><div><b>Time</b>'+esc(y.inspectionTime||"—")+(y.shift?" · "+esc(y.shift):"")+'</div><div><b>Qty</b>'+(((y.inspectionQty!=null||y.foundQty!=null||y.totalNg!=null)?qtyStr(y):"—"))+'</div><div><b>User</b>'+(y.telegramUsername?"@"+esc(y.telegramUsername):"—")+'</div><div><b>Sync</b>'+esc(y.sheetSyncStatus||"")+'</div></div>'+(y.defectRemark?'<div class="rcallout">'+esc(y.defectRemark)+'</div>':"")+'</div>'}
+$("mcards").innerHTML=mh;
     var trs=document.querySelectorAll("tr[data-i],.rcard[data-i]");for(var k=0;k<trs.length;k++){trs[k].onclick=function(){openModal(Number(this.getAttribute("data-i")))}}
     var pages=Math.max(1,Math.ceil(S.total/S.limit));
     $("meta-count").textContent=S.total+" inspections · page "+(S.page+1)+" / "+pages;
     $("pageinfo").textContent=(S.page*S.limit+1)+"–"+Math.min(S.total,(S.page+1)*S.limit)+" of "+S.total;
-    $("meta-page").textContent="limit "+S.limit+" / page";
+    $("meta-page").textContent="limit "+S.limit+" / page";renderChips();
     applyView();
   }catch(e){$("skel").style.display="none";toast("Failed to load rows — is the DB up?")}
 }
@@ -400,7 +444,15 @@ function bkkHour(){try{return Number(new Intl.DateTimeFormat("en-GB",{timeZone:"
 function sumToday(){try{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}catch(e){var d=new Date();var p=function(n){return String(n).padStart(2,"0")};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}}
 function nightDefault(){var h=bkkHour();try{var parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());if(h<20){var t=new Date(parts+"T12:00:00Z");t.setUTCDate(t.getUTCDate()-1);return t.toISOString().slice(0,10)}return parts}catch(e){return sumToday()}}
 function sumPath(){return S.night?"/api/qc/summary/night?date=":"/api/qc/summary?date="}
-async function loadSummary(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());document.getElementById("sum-text").textContent="Building "+d+"...";try{var s=await fetch(sumPath()+d+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):"")).then(function(r){return r.json()});var D=s.data;if(!D){throw 0}document.getElementById("sum-text").textContent=D.text;var order=[["cutting","Cutting"],["border","Border"],["hole","Hole"],["cleaning","Cleaning"],["packing","Packing"],["special","Special"]];var h="";for(var i=0;i<order.length;i++){var k=order[i][0],title=order[i][1];var jobs=D.lines[k]||[];h+="<div class=sum-line><h4>"+title+" "+(D.lineCounts[k]||0)+"</h4>";if(!jobs.length){h+="<div>--</div>"}else{for(var j=0;j<jobs.length;j++){h+="<div class=sum-job>"+esc(jobs[j].jobNumber)+"("+jobs[j].machines.join(",")+")</div>"}}h+="</div>"}h+="<div class=sum-line><h4>Problems "+D.problems.length+"</h4>"+(D.problems.length?D.problems.slice(0,6).map(function(q){return "<div>"+esc(q.jobNumber)+" M"+esc(q.machineNumber||"-")+" - "+esc(q.defectRemark||q.qcResult||"")+"</div>"}).join("")+"</div>":"<div>All OK</div></div>")+"<div class=sum-line><h4>Totals</h4><div>Total - "+D.total+"<br>H - "+D.lineCounts.hole+"<br>CT - "+D.lineCounts.cutting+"<br>Border - "+D.lineCounts.border+"<br>NG - "+D.ng+"</div></div>";document.getElementById("sum-cards").innerHTML=h;if(S.night&&D.total===0)toast("Empty night - it starts 20:00 on the picked date; for last night pick yesterday")}catch(e){document.getElementById("sum-text").textContent="Failed."}}
+async function loadSummary(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());document.getElementById("sum-text").textContent="Building "+d+"...";try{var s=await fetch(sumPath()+d+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):"")).then(function(r){return r.json()});var D=s.data;if(!D){throw 0}document.getElementById("sum-text").textContent=D.text;var order=[["cutting","Cutting","#f472b6"],["border","Border","#fb923c"],["hole","Hole","#60a5fa"],["cleaning","Cleaning","#34d399"],["packing","Packing","#a78bfa"],["special","Special","#94a3b8"]];
+var h="";
+for(var i=0;i<order.length;i++){var k=order[i][0],title=order[i][1],col=order[i][2];var jobs=D.lines[k]||[];
+h+='<div class="rep-line"><div class="rep-line-h"><i style="background:'+col+';box-shadow:0 0 10px '+col+'"></i>'+title+'<span class="rep-count">'+(D.lineCounts[k]||0)+'</span></div>';
+if(!jobs.length){h+='<span class="rep-empty">—</span>'}else{h+='<div class="rep-jobs">';for(var j=0;j<jobs.length;j++){h+='<span class="jobchip"><b>'+esc(jobs[j].jobNumber)+'</b><small>('+jobs[j].machines.map(esc).join(",")+')</small></span>'}h+='</div>'}
+h+='</div>'}
+if(D.problems.length){h+='<div class="prob-wrap">';for(var p=0;p<Math.min(6,D.problems.length);p++){var q=D.problems[p];h+='<div class="prob-card"><div class="prob-h">'+esc(q.jobNumber)+' · M'+esc(q.machineNumber||"-")+'</div>'+(q.defectRemark?'<div class="prob-defect">'+esc(q.defectRemark)+'</div>':"")+'<div class="prob-meta">'+esc(q.qcResult||"")+' · '+esc(q.inspectionTime||"")+'</div></div>'}if(D.problems.length>6){h+='<div class="rep-empty">+'+(D.problems.length-6)+' more in message below</div>'}h+='</div>'}
+h+='<div class="tot-strip"><div><b>'+D.total+'</b><span>Total</span></div><div><b>'+D.lineCounts.hole+'</b><span>Hole</span></div><div><b>'+D.lineCounts.cutting+'</b><span>Cutting</span></div><div><b>'+D.lineCounts.border+'</b><span>Border</span></div><div class="'+(D.ng?"bad":"")+'"><b>'+D.ng+'</b><span>NG</span></div>'+(D.unfinished?'<div><b>'+D.unfinished+'</b><span>Unfin.</span></div>':"")+'</div>';
+document.getElementById("sum-cards").innerHTML=h;if(S.night&&D.total===0)toast("Empty night - it starts 20:00 on the picked date; for last night pick yesterday")}catch(e){document.getElementById("sum-text").textContent="Failed."}}
 document.getElementById("btn-sum").onclick=loadSummary;
 document.getElementById("btn-night").onclick=function(){S.night=!S.night;this.className="gbtn "+(S.night?"primary":"");try{document.getElementById("s-date").value=S.night?nightDefault():sumToday()}catch(e){}loadSummary()};
 document.getElementById("btn-copy").onclick=function(){var v=document.getElementById("sum-text").textContent||"";var btn=this;if(navigator.clipboard){navigator.clipboard.writeText(v).then(function(){toast("Summary copied - paste to Telegram");btn.innerHTML="Copied";setTimeout(function(){btn.innerHTML="Copy text"},1600)})}else{toast("Copy not supported")}};
