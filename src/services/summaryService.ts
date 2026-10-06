@@ -24,7 +24,7 @@ export function lineFor(process: string | null | undefined): LineKey {
   return 'special';
 }
 
-export interface SummaryJob { jobNumber: string; machines: string[]; count: number }
+export interface SummaryJob { jobNumber: string; numbers: string[]; count: number }
 export interface SummaryProblem {
   jobNumber: string; machineNumber: string | null; number: string | null;
   shift: string | null; defectRemark: string | null; qcCheck: string | null;
@@ -114,14 +114,14 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
     const line = lineFor(r.process);
     const m = grouped[line];
     const list = m.get(r.jobNumber) ?? [];
-    list.push(r.machineNumber ?? '—');
+    list.push(r.number ?? '—');
     m.set(r.jobNumber, list);
   }
   const lines = {} as Record<LineKey, SummaryJob[]>;
   const lineCounts = {} as Record<LineKey, number>;
   for (const { key } of LINE_META) {
     const jobs: SummaryJob[] = [...grouped[key].entries()]
-      .map(([jobNumber, machines]) => ({ jobNumber, machines, count: machines.length }))
+      .map(([jobNumber, numbers]) => ({ jobNumber, numbers, count: numbers.length }))
       .sort((a, b) => a.jobNumber.localeCompare(b.jobNumber));
     lines[key] = jobs;
     lineCounts[key] = jobs.reduce((n, j) => n + j.count, 0);
@@ -149,7 +149,7 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
       const jm = new Map<string, string[]>();
       for (const r of rs) {
         const l = jm.get(r.jobNumber) ?? [];
-        l.push(r.machineNumber ?? '\u2014');
+        l.push(r.number ?? '\u2014');
         jm.set(r.jobNumber, l);
       }
       return {
@@ -159,7 +159,7 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
         ng: rs.filter((r) => (r.qcResult ?? '').toUpperCase() === 'NG').length,
         unfinished: rs.filter((r) => (r.status ?? '').toLowerCase() === 'unfinished').length,
         jobs: [...jm.entries()]
-          .map(([jobNumber, machines]) => ({ jobNumber, machines, count: machines.length }))
+          .map(([jobNumber, numbers]) => ({ jobNumber, numbers, count: numbers.length }))
           .sort((a, b) => a.jobNumber.localeCompare(b.jobNumber)),
       };
     })
@@ -184,14 +184,13 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
     L.push(title);
     const jobs = lines[key];
     if (jobs.length === 0) { L.push('—'); }
-    else for (const j of jobs) L.push(`✅${j.jobNumber}(${j.machines.join(',')})`);
+    else for (const j of jobs) L.push(`✅${j.jobNumber}(${j.numbers.join(',')})`);
   }
   L.push('');
   if (problems.length === 0) { L.push(problemHeader.replace('have a problem', 'not have a problem.')); }
   else { L.push(problemHeader); for (const p of problems) {
     if (p.shift) L.push(`Shift work (${p.shift})`);
     L.push(`Job Number: ${p.jobNumber}`);
-    L.push(`Machine number: ${p.machineNumber ?? '—'}`);
     L.push(`Number: ${p.number ?? '—'}`);
     if (p.defectRemark) L.push(`Found Problem: ${p.defectRemark}`);
     if (p.inspectionQty != null || p.qcCheck) L.push(`QC random : ${p.inspectionQty != null ? `${p.inspectionQty}pcs.` : (p.qcCheck ?? '')}`);
