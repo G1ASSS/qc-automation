@@ -203,6 +203,15 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 }
 @media(max-width:560px){.filters{grid-template-columns:1fr}.kpi .val{font-size:26px}.kv{grid-template-columns:1fr}.kv dt{margin-top:9px}.sum-grid{grid-template-columns:1fr}.brand p{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}html{scroll-behavior:auto}}
+.dock{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;gap:4px;padding:8px;border-radius:24px;border:1px solid var(--line2);background:color-mix(in srgb,var(--card) 72%,transparent);box-shadow:0 18px 50px rgba(2,6,18,.5),inset 0 1px 0 rgba(255,255,255,.35);backdrop-filter:blur(26px) saturate(1.8);-webkit-backdrop-filter:blur(26px) saturate(1.8);animation:dockin .6s var(--ease) both}
+@keyframes dockin{from{opacity:0;transform:translateX(-50%) translateY(30px) scale(.94)}to{opacity:1;transform:translateX(-50%)}}
+.dock button{position:relative;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:68px;padding:9px 10px 7px;border-radius:17px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.03em;transition:all .25s var(--snap)}
+.dock button svg{transition:transform .25s var(--snap)}
+.dock button:hover{color:var(--ink)}
+.dock button:active{transform:scale(.88)}
+.dock button.on{color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed 60%,#0891b2);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 8px 22px rgba(59,130,246,.55);text-shadow:0 1px 4px rgba(2,6,18,.4)}
+.dock button.on svg{transform:translateY(-1px) scale(1.08)}
+@media(max-width:560px){.dock{gap:2px;padding:7px}.dock button{min-width:60px}}
 </style>
 </head>
 <body>
@@ -290,6 +299,12 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 <footer><span>QC Pulse · Telegram to Postgres to Sheets to Excel · <span id="foot-health">checking…</span></span><span class="mono" id="foot-time"></span></footer>
 </main>
 <div class="modal" id="modal" role="dialog" aria-modal="true"><div class="backdrop" id="mback"></div><div class="sheet"><div style="display:flex;gap:10px;align-items:center"><div class="logo" style="width:36px;height:36px"><svg width="18" height="18"><use href="#i-factory"/></svg></div><div><div id="m-title" style="font-weight:900">Inspection</div><div id="m-sub" style="font-size:12px;color:var(--muted)">—</div></div><div style="flex:1"></div><button class="iconbtn" id="mclose" aria-label="Close"><svg width="16" height="16"><use href="#i-x"/></svg></button></div><div id="m-body"></div></div></div>
+<nav class="dock" id="dock" aria-label="App sections">
+<button data-go="sec-overview" class="on"><svg width="20" height="20"><use href="#i-grid"/></svg>Overview</button>
+<button data-go="sec-summary"><svg width="20" height="20"><use href="#i-doc"/></svg>Summary</button>
+<button data-go="sec-records"><svg width="20" height="20"><use href="#i-rows"/></svg>Records</button>
+<button id="dock-export"><svg width="20" height="20"><use href="#i-dl"/></svg>Export</button>
+</nav>
 <div class="toast" id="toast"></div>
 <script>
 var S={page:0,limit:50,total:0,rows:[],all:[],view:"auto",night:false};
@@ -408,6 +423,10 @@ if("IntersectionObserver" in window){
   document.querySelectorAll(".reveal").forEach(function(el){revIO.observe(el)});
 }
 moveInd();
+document.querySelectorAll("#dock button[data-go]").forEach(function(b){b.addEventListener("click",function(){var el=document.getElementById(b.getAttribute("data-go"));if(el)el.scrollIntoView({behavior:"smooth",block:"start"});if(navigator.vibrate){try{navigator.vibrate(8)}catch(e){}}})});
+document.getElementById("dock-export").onclick=function(){doExport();if(navigator.vibrate){try{navigator.vibrate(8)}catch(e){}}};
+function dockSync(){var id=null;var secs=["sec-overview","sec-summary","sec-records"];var best=1e9;for(var i=0;i<secs.length;i++){var el=document.getElementById(secs[i]);if(!el)continue;var d=Math.abs(el.getBoundingClientRect().top-120);if(d<best){best=d;id=secs[i]}}document.querySelectorAll("#dock button[data-go]").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-go")===id)})}
+var dockT=null;window.addEventListener("scroll",function(){if(dockT)return;dockT=setTimeout(function(){dockT=null;dockSync()},120)},{passive:true});
 try{document.getElementById("s-date").value=sumToday()}catch(e){}
 if(me()||isMgr()){document.getElementById("login-veil").style.display="none";applyLogin();boot()}
 setInterval(function(){if(me()||isMgr())loadAll()},60000);
