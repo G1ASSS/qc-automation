@@ -42,7 +42,7 @@ body{margin:0;min-height:100vh;color:var(--ink);font-family:ui-sans-system,-appl
 .brand h1{margin:0;font-size:16.5px;letter-spacing:-.01em}
 .brand p{margin:1px 0 0;font-size:11.5px;color:var(--muted)}
 .spacer{flex:1}
-.nav{display:flex;gap:2px;padding:4px;border-radius:15px;background:rgba(2,6,18,.28);border:1px solid var(--line);position:relative}
+.nav{display:none;gap:2px;padding:4px;border-radius:15px;background:rgba(2,6,18,.28);border:1px solid var(--line);position:relative}
 [data-theme="light"] .nav{background:rgba(255,255,255,.5)}
 .nav a{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:11px;font-size:13px;font-weight:800;color:var(--muted);text-decoration:none;position:relative;z-index:1;transition:color .25s}
 .nav a.on{color:var(--ink)}
@@ -190,6 +190,7 @@ footer{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;j
 .reveal.in{opacity:1;transform:none;transition:opacity .6s,transform .65s var(--ease)}
 @media(max-width:1120px){.kpis{grid-template-columns:repeat(3,1fr)}.filters{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
 @media(max-width:860px){
+  .nav{display:flex}
   .tscroll table{display:none}.cards{display:grid}
   .filters{grid-template-columns:1fr 1fr}
   .toolbar{top:76px}
@@ -285,7 +286,7 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <div class="logo"><svg width="22" height="22"><use href="#i-factory"/></svg></div>
 <div class="brand"><h1>QC Pulse</h1><p>Factory QC Command Center · Asia/Bangkok</p></div>
 <div class="spacer"></div>
-<nav class="nav hide-sm" id="nav" aria-label="Sections">
+<nav class="nav" id="nav" aria-label="Sections">
 <span class="ind" id="nav-ind"></span>
 <a href="#sec-overview" data-sec="sec-overview" class="on"><svg width="15" height="15"><use href="#i-grid"/></svg><span>Overview</span></a>
 <a href="#sec-summary" data-sec="sec-summary"><svg width="15" height="15"><use href="#i-doc"/></svg><span>Summary</span></a>
@@ -474,7 +475,7 @@ window.addEventListener("resize",moveInd);
 if("IntersectionObserver" in window){
   var secIO=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){var id=en.target.id;document.querySelectorAll(".nav a").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-sec")===id)});moveInd()}})},{rootMargin:"-40% 0px -55% 0px"});
   ["sec-overview","sec-summary","sec-records"].forEach(function(id){var el=document.getElementById(id);if(el)secIO.observe(el)});
-  var revIO=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){en.target.classList.add("in");revIO.unobserve(en.target)}})},{threshold:.08});
+  var revIO=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){en.target.classList.add("in");revIO.unobserve(en.target)}})},{threshold:.05,rootMargin:"0px 0px 320px 0px"});setTimeout(function(){document.querySelectorAll(".reveal:not(.in)").forEach(function(el){el.classList.add("in")})},1500);
   document.querySelectorAll(".reveal").forEach(function(el){revIO.observe(el)});
 }
 moveInd();
