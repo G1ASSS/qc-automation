@@ -18,6 +18,8 @@ const HELP_TEXT = [
   '/status - system status',
   '/today - today\'s QC summary',
   '/export - get the Excel export link',
+  '/summary [YYYY-MM-DD] - daily work summary',
+  '/mywork [YYYY-MM-DD] - your own inspections today (proves what you did)',
   '',
   'Report format example:',
   'IPQC Random Inspection 15/09/2026',
@@ -76,6 +78,43 @@ export async function handleTelegramCommand(opts: {
     }
     return true;
   }
+  if (cmd === '/summary' || cmd === '/daily') {
+    try {
+      const { buildDailySummary } = await import('./summaryService.js');
+      const m = /^\/(?:summary|daily)(?:@\w+)?\s*(\d{4}-\d{2}-\d{2})?/.exec(command.trim());
+      const date = (m && m[1]) || todayBangkokISO();
+      const s = await buildDailySummary(date);
+      const text = s.text.length > 3900 ? s.text.slice(0, 3900) + '\n...(truncated)' : s.text;
+      await sendTelegramMessage(chatId, text);
+    } catch (err) {
+      logger.error({ err }, 'Failed to build /summary');
+      await sendTelegramMessage(chatId, 'Could not build daily summary. Try again later.');
+    }
+    return true;
+  }
+  if (cmd === '/mywork') {
+    try {
+      const { prisma: p2 } = await import('../database/prisma.js');
+      const m = /^\/mywork(?:@\w+)?\s*(\d{4}-\d{2}-\d{2})?/.exec(command.trim());
+      const date = (m && m[1]) || todayBangkokISO();
+      const me = (opts.username ?? '').trim();
+      if (!me) { await sendTelegramMessage(chatId, 'Your Telegram username is hidden - set a @username first, then /mywork works.'); return true; }
+      const start = new Date(date + 'T00:00:00.000Z');
+      const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1);
+      const rows = await p2.qcInspection.findMany({ where: { inspectionDate: { gte: start, lt: end }, telegramUsername: { equals: me, mode: 'insensitive' } }, orderBy: { createdAt: 'asc' }, take: 500 });
+      if (rows.length === 0) { await sendTelegramMessage(chatId, '@' + me + ' - no inspections on ' + date + '. If you reported today, check the username matches.'); return true; }
+      const ok = rows.filter((r) => (r.qcResult ?? '').toUpperCase() === 'OK').length;
+      const ng = rows.filter((r) => (r.qcResult ?? '').toUpperCase() === 'NG').length;
+      const jm = new Map();
+      for (const r of rows) { const l = jm.get(r.jobNumber) ?? []; l.push(r.machineNumber ?? '-'); jm.set(r.jobNumber, l); }
+      const jobStr = [...jm.entries()].map(([j, ms]) => j + '(' + ms.join(',') + ')').join(' ');
+      await sendTelegramMessage(chatId, '@' + me + ' ' + date + ': ' + rows.length + ' inspections (OK ' + ok + ', NG ' + ng + ')\n' + jobStr);
+    } catch (err) {
+      logger.error({ err }, 'Failed /mywork');
+      await sendTelegramMessage(chatId, 'Could not load your work. Try again later.');
+    }
+    return true;
+  }
   if (cmd === '/export') {
     const base = (config.publicBaseUrl ?? '').replace(/\/$/, '');
     if (base) {
@@ -88,18 +127,20 @@ export async function handleTelegramCommand(opts: {
   return false;
 }
 
-export async function getDashboardStats(): Promise<{
+export async function getDashboardStats(username?: string): Promise<{
   today: Awaited<ReturnType<typeof getTodayStats>>;
   recent: unknown[];
   pendingSync: number;
   failedSync: number;
   failedMessages: number;
 }> {
-  const today = await getTodayStats(todayBangkokISO());
+  const who = (username ?? "").trim().replace(/^@/, "");
+  const today = await getTodayStats(todayBangkokISO(), who || undefined);
+  const mine = who ? { telegramUsername: { equals: who, mode: "insensitive" as const } } : {};
   const [recentRaw, pendingSync, failedSync, failedMessages] = await Promise.all([
-    prisma.qcInspection.findMany({ orderBy: { createdAt: 'desc' }, take: 20 }),
-    prisma.qcInspection.count({ where: { sheetSyncStatus: 'PENDING' } }),
-    prisma.qcInspection.count({ where: { sheetSyncStatus: 'FAILED' } }),
+    prisma.qcInspection.findMany({ where: mine, orderBy: { createdAt: 'desc' }, take: 20 }),
+    prisma.qcInspection.count({ where: { ...mine, sheetSyncStatus: 'PENDING' } }),
+    prisma.qcInspection.count({ where: { ...mine, sheetSyncStatus: 'FAILED' } }),
     prisma.failedMessage.count({ where: { resolved: false } }),
   ]);
   const recent = (recentRaw as unknown as Record<string, unknown>[]).map(serializeQcRow);

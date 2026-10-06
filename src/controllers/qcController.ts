@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { QcFilterSchema } from '../validators/qcValidator.js';
 import { listQcInspections, serializeQcRow } from '../services/qcService.js';
 import { buildQcWorkbook, qcReportFileName } from '../services/excelExportService.js';
+import { buildDailySummary } from '../services/summaryService.js';
+import { todayBangkokISO } from '../utils/timezone.js';
 import { logger } from '../config/logger.js';
 
 export async function listQcHandler(req: Request, res: Response): Promise<void> {
@@ -27,4 +29,20 @@ export async function exportQcHandler(req: Request, res: Response): Promise<void
   res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
   await wb.xlsx.write(res);
   res.end();
+}
+
+export async function summaryHandler(req: Request, res: Response): Promise<void> {
+  const raw = typeof req.query.date === 'string' ? req.query.date : todayBangkokISO();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    res.status(400).json({ ok: false, error: 'date must be YYYY-MM-DD' });
+    return;
+  }
+  const u = typeof req.query.user === "string" ? req.query.user : undefined;
+  const sh = typeof req.query.shift === "string" ? req.query.shift : undefined;
+  const summary = await buildDailySummary(raw, u, sh);
+  if (req.query.format === 'text') {
+    res.type('text/plain; charset=utf-8').send(summary.text);
+    return;
+  }
+  res.json({ ok: true, data: summary });
 }

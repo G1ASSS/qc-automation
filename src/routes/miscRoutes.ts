@@ -12,9 +12,10 @@ miscRouter.get('/ready', readyHandler);
 miscRouter.post('/api/admin/telegram/set-webhook', setWebhookHandler);
 miscRouter.post('/api/admin/telegram/delete-webhook', deleteWebhookHandler);
 
-miscRouter.get('/api/admin/stats', async (_req, res, next) => {
+miscRouter.get('/api/admin/stats', async (req, res, next) => {
   try {
-    res.json({ ok: true, ...(await getDashboardStats()) });
+    const u = typeof req.query.user === "string" ? req.query.user : undefined;
+    res.json({ ok: true, ...(await getDashboardStats(u)) });
   } catch (err) {
     next(err);
   }

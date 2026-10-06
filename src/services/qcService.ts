@@ -1,4 +1,5 @@
 import { prisma } from '../database/prisma.js';
+import type { Prisma } from '@prisma/client';
 import { logger } from '../config/logger.js';
 import type { ParsedQCData, TelegramMeta } from '../types/qc.js';
 import type { QcFilter } from '../validators/qcValidator.js';
@@ -91,6 +92,8 @@ export async function listQcInspections(filter: QcFilter): Promise<{ rows: unkno
   if (filter.machineNumber) where.machineNumber = { equals: filter.machineNumber, mode: 'insensitive' };
   if (filter.status) where.status = { equals: filter.status, mode: 'insensitive' };
   if (filter.inspectionType) where.inspectionType = { contains: filter.inspectionType, mode: 'insensitive' };
+  if (filter.user) where.telegramUsername = { equals: filter.user.replace(/^@/, ''), mode: 'insensitive' };
+  if (filter.shift) where.shift = { equals: filter.shift, mode: 'insensitive' };
 
   const [rows, total] = await Promise.all([
     prisma.qcInspection.findMany({
@@ -113,14 +116,16 @@ export interface TodayStats {
   byFactory: { factory: string; total: number }[];
 }
 
-export async function getTodayStats(bangkokISODate: string): Promise<TodayStats> {
+export async function getTodayStats(bangkokISODate: string, username?: string): Promise<TodayStats> {
   const start = new Date(`${bangkokISODate}T00:00:00.000Z`);
   // NOTE: inspectionDate is stored as a calendar date (UTC midnight). Bangkok-day scoping uses the same
   // calendar date token; for stricter TZ-day semantics, scope on receivedAt converted in SQL.
   // Here we scope inspections whose inspectionDate equals the Bangkok calendar date — matches business use.
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
-  const where = { inspectionDate: { gte: start, lt: end } };
+  const who = (username ?? "").trim().replace(/^@/, "");
+  const where: Prisma.QcInspectionWhereInput = { inspectionDate: { gte: start, lt: end } };
+  if (who) where.telegramUsername = { equals: who, mode: "insensitive" };
   const [total, ok, ng, unfinished, groups] = await Promise.all([
     prisma.qcInspection.count({ where }),
     prisma.qcInspection.count({ where: { ...where, qcResult: { equals: 'OK', mode: 'insensitive' } } }),

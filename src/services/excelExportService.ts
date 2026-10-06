@@ -103,6 +103,8 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
   if (filter.jobNumber) where.jobNumber = { equals: filter.jobNumber, mode: 'insensitive' };
   if (filter.machineNumber) where.machineNumber = { equals: filter.machineNumber, mode: 'insensitive' };
   if (filter.status) where.status = { equals: filter.status, mode: 'insensitive' };
+  if ((filter as { user?: string }).user) where.telegramUsername = { equals: (filter as { user?: string }).user!.replace(/^@/, ''), mode: 'insensitive' };
+  if ((filter as { shift?: string }).shift) (where as Record<string, unknown>).shift = { equals: (filter as { shift?: string }).shift, mode: 'insensitive' };
 
   const rows = await prisma.qcInspection.findMany({
     where,

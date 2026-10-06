@@ -201,9 +201,19 @@ export function parseQCMessage(message: string): ParseResult {
   }
   if (!jobNumber) {
     for (const line of cleaned) {
+      if (/job\s*(?:number|no\.?|#)?\s*[:=\-]/i.test(line)) continue; // labeled line already handled above (incl. "-" = no job)
       const m = /job\s*(?:number|no\.?)?\s+([A-Za-z0-9][A-Za-z0-9\-_/\\.]*)/i.exec(line);
       if (m) {
         jobNumber = stripTrailingPeriod(m[1].trim());
+        break;
+      }
+    }
+  }
+
+  if (!jobNumber) {
+    for (const line of cleaned) {
+      if (/job\s*(?:number|no\.?|#)?\s*[:=\-]\s*(?:[-\u2014]|n\/?a|nil|none)\s*$/i.test(line)) {
+        jobNumber = 'NO-JOB';
         break;
       }
     }
@@ -213,9 +223,12 @@ export function parseQCMessage(message: string): ParseResult {
   let machineNumber: string | null = null;
   for (const line of cleaned) {
     if (!/machine/i.test(line)) continue;
-    const m = /machine\s*(?:no\.?|number|#)?\s*[:=\-.]?\s*([A-Za-z0-9]+)/i.exec(line);
+    const m = /machine\s*(?:no\.?|number|#)?\s*[:=\-.]?\s*(.+)/i.exec(line);
     if (m) {
-      machineNumber = stripTrailingPeriod(m[1].trim());
+      const val = stripTrailingPeriod(m[1].trim()).slice(0, 50);
+      if (!val || /^[-\u2014\s]*$/.test(val)) { machineNumber = null; break; }
+      if (val.length > 30) continue; // probably a sentence, not an identifier
+      machineNumber = val;
       break;
     }
   }
@@ -276,13 +289,14 @@ export function parseQCMessage(message: string): ParseResult {
     if (inspectionQty == null) {
       // Skip date lines so the day of "Inspection 15/09/2026" is never read as a quantity
       if (!findDate(line)) {
-        const m = /random\s*inspection\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?)?/i.exec(line);
+        const m = /(?:qc\s+)?random\s*(?:inspection|check)?\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?)?/i.exec(line);
         if (m) inspectionQty = Number(m[1]);
       }
     }
     if (foundQty == null) {
       let m = /number\s*of\s*\w*\s*found\s*[:=\-]?\s*(\d+)/i.exec(line);
       if (!m) m = /jobs?\s*found\s*[:=\-]?\s*(\d+)/i.exec(line);
+      if (!m) m = /(?:ng\s*)?found\s*(?:items?)?\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?)?/i.exec(line);
       if (m) foundQty = Number(m[1]);
     }
     if (totalNg == null) {
@@ -376,7 +390,7 @@ export function parseQCMessage(message: string): ParseResult {
       }
       continue;
     }
-    let m = /^(?:(?:defects?|remarks?|problems?|issues?|reasons?)(?:\s+(?:encountered|found|details?|description))?|ng\s*(?:reason|problem|remark|defect)?)\s*[:=\-.,]*\s*(.+)/i.exec(line);
+    let m = /^(?:(?:defects?|remarks?|problems?|issues?|reasons?)(?:\s+(?:encountered|found|details?|description))?|(?:found\s+)?(?:defects?|remarks?|problems?|issues?|reasons?)|ng\s*(?:reason|problem|remark|defect)?)\s*[:=\-.,]*\s*(.+)/i.exec(line);
     if (m) {
       const val = stripTrailingPeriod(normalizeSpaces(m[1].trim()));
       if (val && !defectRemark) {

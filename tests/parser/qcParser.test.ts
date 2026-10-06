@@ -279,4 +279,60 @@ Total NG=400pcs`;
     if (!r.success) return;
     expect(r.data.number).toBe('00892496');
   });
+  it('26. parses cleaning-line problem report with Found Problem + QC random check + NGFound items', () => {
+    const msg = "\u{1F6A8} IPQC 06/10/2026Random inspection reports \nHave revealed problems.\nFactory 2 Cleaning Line\n\u23F0 Time:18:11\nShift work (A)\nJob Number: ZW-08\nMachine number: cleaning\nNumber: 3\nFound Problem: The glue bonding is not good and needs rework.\n\n\nQC random check: 10 pcs\nNGFound items: 30 pcs\nTotal NG: 50 pcs\nPlease rework  sir.";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-10-06');
+    expect(r.data.factory).toBe('Factory 2');
+    expect(r.data.process).toBe('Cleaning Line');
+    expect(r.data.jobNumber).toBe('ZW-08');
+    expect(r.data.machineNumber).toBe('cleaning');
+    expect(r.data.number).toBe('3');
+    expect(r.data.inspectionTime).toBe('18:11');
+    expect(r.data.qcResult).toBe('NG');
+    expect(r.data.defectRemark).toBe('The glue bonding is not good and needs rework');
+    expect(r.data.shift).toBe('A');
+    expect(r.data.inspectionQty).toBe(10);
+    expect(r.data.foundQty).toBe(30);
+    expect(r.data.totalNg).toBe(50);
+  });
+  it('27. parses dash-job area report with bare time and near-machine text', () => {
+    const msg = "IPQC 09/09/2026Random inspection reports have revealed problems.\nFactory 2 hole Line\n17:47\nShift work: (A)\nJob Number: -\nMachine number: near 24\nNumber: -\nProblems encountered: The pile has collapsed\nQc Random Inspection: 10 pcs\nNumber of jobs found: 20 pcs";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-09-09');
+    expect(r.data.jobNumber).toBe('NO-JOB');
+    expect(r.data.machineNumber).toBe('near 24');
+    expect(r.data.inspectionTime).toBe('17:47');
+    expect(r.data.qcResult).toBe('NG');
+    expect(r.data.defectRemark).toBe('The pile has collapsed');
+    expect(r.data.inspectionQty).toBe(10);
+    expect(r.data.foundQty).toBe(20);
+  });
+
+  it('28. parses space-before-colon random check and dash Total NG', () => {
+    const msg = "IPQC 06/10/2026\nFactory 2 hole line\nTime: 10:29\nShift work (A)\nJob Number: SN-03\nMachine number: 12\nNumber: 10\nFound Problem: side frames are not same\nQC random : 10pcs.\nNGFound items: 8pcs.\nTotal NG: -";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.jobNumber).toBe('SN-03');
+    expect(r.data.defectRemark).toBe('side frames are not same');
+    expect(r.data.inspectionQty).toBe(10);
+    expect(r.data.foundQty).toBe(8);
+    expect(r.data.totalNg).toBe(null);
+  });
+
+  it('29. parses night-shift hours and night shift code', () => {
+    const msg = "IPQC Random Inspection 06/10/2026\nFactory 2 Row hole\nJob Number: SN-03\nNumber: 5\nMachine No: 12\nTime: 02:30\nShift work (N)\nQC check 100%=1pc.\nQC check Ok.";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionTime).toBe('02:30');
+    expect(r.data.shift).toBe('N');
+    expect(r.data.qcResult).toBe('OK');
+  });
+
 });
