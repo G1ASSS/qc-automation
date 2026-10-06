@@ -187,9 +187,8 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
     else for (const j of jobs) L.push(`✅${j.jobNumber}(${j.machines.join(',')})`);
   }
   L.push('');
-  L.push(problemHeader);
-  if (problems.length === 0) { L.push('No problem — all OK ✅'); }
-  else for (const p of problems) {
+  if (problems.length === 0) { L.push(problemHeader.replace('have a problem', 'not have a problem.')); }
+  else { L.push(problemHeader); for (const p of problems) {
     if (p.shift) L.push(`Shift work (${p.shift})`);
     L.push(`Job Number: ${p.jobNumber}`);
     L.push(`Machine number: ${p.machineNumber ?? '—'}`);
@@ -201,6 +200,7 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
     L.push(`Total NG: ${p.totalNg != null ? String(p.totalNg) : '—'}`);
     L.push(`It's okay confirmed`);
     L.push('');
+    }
   }
   L.push('');
   L.push(`Total - ${rows.length}`);
