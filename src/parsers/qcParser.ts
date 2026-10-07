@@ -146,7 +146,20 @@ export function parseQCMessage(message: string): ParseResult {
   const originalLines = message.split(/\r?\n/);
   const lines = originalLines.map((l) => l.trim()).filter((l) => l.length > 0);
   const cleaned = lines.map((l) => normalizeSpaces(stripLeadingSymbols(normalizePunctuation(l))));
-  const fullText = cleaned.join('\n');
+  const BARE_LABEL_RE = /^(model\s*(number|no\.?)?|colou?r|job\s*(number|no\.?|#)?|man?chine\s*(?:no\.?|number|#|at)?|number|shift(?:\s*work)?|total\s*ng|time|defects?|remarks?|problems?|issues?|reasons?)\s*[:=\-.]?\s*$/i;
+  const VALUE_GUARD_RE = /check|random|shift|job|man?chine|model|colou?r|number|time|total|factory|status|defect|problem|remark|found|note|please/i;
+  const merged: string[] = [];
+  for (let li = 0; li < cleaned.length; li++) {
+    const line = cleaned[li];
+    const next = cleaned[li + 1];
+    if (next !== undefined && BARE_LABEL_RE.test(line) && !BARE_LABEL_RE.test(next) && !findDate(next) && !VALUE_GUARD_RE.test(next)) {
+      merged.push(normalizeSpaces(line + ' : ' + next));
+      li++;
+    } else {
+      merged.push(line);
+    }
+  }
+  const fullText = merged.join('\n');
 
   // ---------- Inspection date + type ----------
   const dateFound = findDate(message);
@@ -156,16 +169,16 @@ export function parseQCMessage(message: string): ParseResult {
   if (lines.length > 0) {
     // Prefer a line that looks like "<type> <date>" (tolerant to spacing typos); else inspection/QC line; else first line.
     let candidate: string | null = null;
-    for (const line of cleaned) {
+    for (const line of merged) {
       if (findDate(line)) {
         candidate = line;
         break;
       }
     }
     if (!candidate) {
-      candidate = cleaned.find((l) => /(ipqc|oqc|iqc|fqc|pqc|qc).*inspect|inspect.*(ipqc|oqc|iqc|qc)/i.test(l)) ?? null;
+      candidate = merged.find((l) => /(ipqc|oqc|iqc|fqc|pqc|qc).*inspect|inspect.*(ipqc|oqc|iqc|qc)/i.test(l)) ?? null;
     }
-    if (!candidate) candidate = cleaned[0] ?? null;
+    if (!candidate) candidate = merged[0] ?? null;
     if (candidate) {
       let t = candidate;
       // Remove date tokens tolerantly (covers "16/09/ 2026", "16 / 09 / 2026", "16-09-2026", etc.)
@@ -178,13 +191,19 @@ export function parseQCMessage(message: string): ParseResult {
   }
 
   // ---------- Factory + process ----------
+  let processSuffixMachine: string | null = null;
   let factory: string | null = null;
   let process: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     const m = /factory\s*[:#\-]?\s*(\d+)\s*(.*)/i.exec(line);
     if (m) {
       factory = `Factory ${m[1]}`;
-      const rest = normalizeSpaces(stripTrailingPeriod(m[2] ?? ''));
+      let rest = normalizeSpaces(stripTrailingPeriod(m[2] ?? '')).replace(/^[:=\-.,\s]+/, '');
+      const pm = /\/\s*([A-Za-z0-9]+)\s*$/.exec(rest);
+      if (pm) {
+        rest = normalizeSpaces(stripTrailingPeriod(rest.slice(0, pm.index))).replace(/[:=\-.,\s]+$/, '');
+        if (!processSuffixMachine) processSuffixMachine = pm[1];
+      }
       process = rest ? rest : null;
       break;
     }
@@ -195,7 +214,7 @@ export function parseQCMessage(message: string): ParseResult {
   // ---------- Job number ----------
   let jobNumber: string | null = null;
   let jobSuffixNumber: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     // Suffixed: "Job: JV11574WH/(ZW-08)" (slash form) or "Job: TD-SWF-102(2,B)" (paren form).
     let m = /job\s*(?:number|no\.?|#)?\s*[:=\-]\s*([A-Za-z0-9][A-Za-z0-9\-_\/\.]*?)\s*\/\(\s*([^)]+?)\s*\)\s*$/i.exec(line);
     if (m && /job/i.test(line)) {
@@ -219,7 +238,7 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
   if (!jobNumber) {
-    for (const line of cleaned) {
+    for (const line of merged) {
       const u = /^([A-Za-z0-9][A-Za-z0-9\-_\.]*?)\s*\/\(\s*([^)]+?)\s*\)$/.exec(line);
       if (u) {
         jobNumber = stripTrailingPeriod(u[1].trim());
@@ -237,7 +256,7 @@ export function parseQCMessage(message: string): ParseResult {
   }
 
   if (!jobNumber) {
-    for (const line of cleaned) {
+    for (const line of merged) {
       if (/job\s*(?:number|no\.?|#)?\s*[:=\-]\s*(?:[-\u2014]|n\/?a|nil|none)\s*$/i.test(line)) {
         jobNumber = 'NO-JOB';
         break;
@@ -246,7 +265,7 @@ export function parseQCMessage(message: string): ParseResult {
   }
   // Laminate reports carry a Model number instead of a Job number: use it as the job key.
   if (!jobNumber) {
-    for (const line of cleaned) {
+    for (const line of merged) {
       const m = /model\s*(?:number|no\.?)?\s*[:=\-]\s*(\S+)/i.exec(line);
       if (m) { jobNumber = stripTrailingPeriod(m[1].trim()).slice(0, 100); break; }
     }
@@ -254,7 +273,7 @@ export function parseQCMessage(message: string): ParseResult {
 
   // ---------- Machine number ----------
   let machineNumber: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     if (!/man?chine/i.test(line)) continue;
     const m = /man?chine\s*(?:no\.?|number|#|at)?\s*[:=\-.]?\s*(.+)/i.exec(line);
     if (m) {
@@ -265,11 +284,12 @@ export function parseQCMessage(message: string): ParseResult {
       break;
     }
   }
+  if (machineNumber == null) machineNumber = processSuffixMachine;
 
   // ---------- Model number + colour (laminate) ----------
   let modelNumber: string | null = null;
   let colour: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     if (modelNumber && colour) break;
     const lowM = line.toLowerCase();
     if (!modelNumber && lowM.includes("model")) {
@@ -287,7 +307,7 @@ export function parseQCMessage(message: string): ParseResult {
 
   // ---------- Number (identifier — keep exact text incl. leading zeros, e.g. "00892496") ----------
   let number: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     const low = line.toLowerCase();
     let m = null;
     if (!/^number\s+of\b/i.test(line)) {
@@ -309,10 +329,11 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
   if (number == null) number = jobSuffixNumber;
+  if (number == null && colour != null) number = colour; // laminate: Number follows Colour
 
   // ---------- Time ----------
   let inspectionTime: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     if (!/time/i.test(line)) continue;
     // Tolerate "Time:01:44", "Time: 01:44", "Time: 01 : 44", "Time01.44", full-width colon (pre-normalized)
     const m = /time\s*[:=\-.]?\s*(\d{1,2}\s*[:.\-]\s*\d{2}(?:\s*[:.]\s*\d{2})?)/i.exec(line);
@@ -323,7 +344,7 @@ export function parseQCMessage(message: string): ParseResult {
   }
   // Fallback: bare time line with no label (e.g. "⏰ 21:39" cleans to "21:39")
   if (!inspectionTime) {
-    for (const line of cleaned) {
+    for (const line of merged) {
       if (line.includes('/') || findDate(line)) continue; // never steal a date
       const m = /^(\d{1,2}\s*[:.\-]\s*\d{2}(?:\s*[:.]\s*\d{2})?)$/.exec(line);
       if (m) {
@@ -343,7 +364,7 @@ export function parseQCMessage(message: string): ParseResult {
   let inspectionQty: number | null = null;
   let foundQty: number | null = null;
   let totalNg: number | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     if (!shift) {
       const m = /shift\s*(?:work)?\s*[:=\-]?\s*\(?([A-Za-z0-9]+)\)?/i.exec(line);
       if (m && /\bshift\b/i.test(line)) shift = m[1].trim();
@@ -374,7 +395,7 @@ export function parseQCMessage(message: string): ParseResult {
   let qcCheck: string | null = null;
   let qcResult: string | null = null;
 
-  for (const line of cleaned) {
+  for (const line of merged) {
     const isQcCheck = QC_CHECK_RE.test(line);
     const isBareCheck = !isQcCheck && (/\bcheck\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\s*\.?$/i.test(line) || /^check\b/i.test(line));
     if (!isQcCheck && !isBareCheck) continue;
@@ -401,7 +422,7 @@ export function parseQCMessage(message: string): ParseResult {
 
   // Fallback result patterns: "QC Result: OK", "Result: NG", standalone "OK"/"NG" line.
   if (!qcResult) {
-    for (const line of cleaned) {
+    for (const line of merged) {
       let m = /qc\s*[-:]?\s*result\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\.?$/i.exec(line);
       if (m) {
         qcResult = normalizeLabel(m[1]);
@@ -415,7 +436,7 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
   if (!qcResult) {
-    for (const line of cleaned) {
+    for (const line of merged) {
       if (QC_CHECK_RE.test(line) && !/^(ok|ng)/i.test(line)) continue;
       // standalone OK/NG with optional emoji already stripped
       const m = /^(ok|ng|pass|fail)\.?$/i.exec(line);
@@ -448,7 +469,7 @@ export function parseQCMessage(message: string): ParseResult {
   // "Reason: ...", "NG: scratch", "NG scratch 5pcs", "QC check NG scratch".
   // Tolerant to missing colon ("Defect scratch 5pcs").
   let defectRemark: string | null = null;
-  for (const line of cleaned) {
+  for (const line of merged) {
     if (QC_CHECK_RE.test(line)) {
       const qm = /qc\s*[-:]?\s*check\s*[:=\-]?\s*ng\s*[:,\-.]*\s*(.+)/i.exec(line);
       if (qm) {
@@ -479,8 +500,8 @@ export function parseQCMessage(message: string): ParseResult {
   let status: string | null = null;
   let originalStatus: string | null = null;
   // Walk lines bottom-up: status is conventionally the last line (e.g. ❌unfinished).
-  for (let i = cleaned.length - 1; i >= 0; i--) {
-    const line = cleaned[i];
+  for (let i = merged.length - 1; i >= 0; i--) {
+    const line = merged[i];
     if (QC_CHECK_RE.test(line)) continue; // belongs to result, not status
     if (/qc\s*[-:]?\s*result/i.test(line)) continue;
     let m = /^status\s*[:=\-]?\s*(.+)/i.exec(line);
