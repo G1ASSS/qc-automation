@@ -1,7 +1,7 @@
 import { prisma } from '../database/prisma.js';
 import { formatDateForDisplay } from '../utils/timezone.js';
 
-export type LineKey = 'cutting' | 'border' | 'hole' | 'cleaning' | 'packing' | 'special';
+export type LineKey = 'cutting' | 'border' | 'hole' | 'cleaning' | 'packing' | 'painting' | 'laminate' | 'assembly' | 'welding' | 'sticker' | 'equipment' | 'banding' | 'special';
 
 export const LINE_META: { key: LineKey; title: string }[] = [
   { key: 'cutting', title: 'Cutting Line' },
@@ -9,6 +9,13 @@ export const LINE_META: { key: LineKey; title: string }[] = [
   { key: 'hole', title: 'Hole Line' },
   { key: 'cleaning', title: 'Cleaning Line' },
   { key: 'packing', title: 'Packing line' },
+  { key: 'painting', title: 'Painting' },
+  { key: 'laminate', title: 'Lamination' },
+  { key: 'assembly', title: 'Assembly' },
+  { key: 'welding', title: 'Welding' },
+  { key: 'sticker', title: 'Sticker' },
+  { key: 'equipment', title: 'Equipment' },
+  { key: 'banding', title: 'Banding' },
   { key: 'special', title: 'Special Work' },
 ];
 
@@ -21,6 +28,13 @@ export function lineFor(process: string | null | undefined): LineKey {
   if (/pack/.test(p)) return 'packing';
   if (/special/.test(p)) return 'special';
   if (/drill/i.test(p)) return 'hole'; // Drilling = Hole
+  if (/pai[n]?t/.test(p)) return 'painting';
+  if (/laminat/.test(p)) return 'laminate';
+  if (/assembl/.test(p)) return 'assembly';
+  if (/weld/.test(p)) return 'welding';
+  if (/sticker/.test(p)) return 'sticker';
+  if (/equi[pm]ment/.test(p)) return 'equipment';
+  if (/banding/.test(p)) return 'banding';
   if (/hole/.test(p)) return 'hole';
   return 'special';
 }
@@ -109,7 +123,10 @@ function assembleSummary(rows: SummaryRows, titleLine: string, problemHeader: st
 
   const grouped: Record<LineKey, Map<string, string[]>> = {
     cutting: new Map(), border: new Map(), hole: new Map(),
-    cleaning: new Map(), packing: new Map(), special: new Map(),
+    cleaning: new Map(), packing: new Map(), painting: new Map(),
+    laminate: new Map(), assembly: new Map(), welding: new Map(),
+    sticker: new Map(), equipment: new Map(), banding: new Map(),
+    special: new Map(),
   };
   for (const r of rows) {
     const line = lineFor(r.process);
