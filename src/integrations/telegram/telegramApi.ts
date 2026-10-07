@@ -35,6 +35,8 @@ export function buildSuccessReply(d: {
   process: string | null;
   jobNumber: string;
   machineNumber: string | null;
+  modelNumber?: string | null;
+  colour?: string | null;
   inspectionTime: string | null;
   qcResult: string | null;
   status: string | null;
@@ -53,6 +55,8 @@ export function buildSuccessReply(d: {
     `Process: ${d.process ?? '-'}`,
     `Job Number: ${d.jobNumber}`,
     `Machine: ${d.machineNumber ?? '-'}`,
+    ...(d.modelNumber ? [`Model: ${d.modelNumber}`] : []),
+    ...(d.colour ? [`Colour: ${d.colour}`] : []),
     `Time: ${d.inspectionTime ?? '-'}`,
     `QC Result: ${d.qcResult ?? '-'}`,
     `Status: ${d.status ?? '-'}`,

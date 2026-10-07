@@ -89,6 +89,8 @@ const HEADERS = [
   'Shift',
   'Telegram User',
   'Received At',
+  'Model Number',
+  'Colour',
 ];
 
 export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workbook> {
@@ -143,6 +145,8 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
     { header: HEADERS[17], key: 'shift', width: 8 }, // R Shift
     { header: HEADERS[18], key: 'user', width: 16 }, // S Telegram User
     { header: HEADERS[19], key: 'received', width: 18 }, // T Received At
+    { header: HEADERS[20], key: 'model', width: 18 }, // U Model Number
+    { header: HEADERS[21], key: 'colour', width: 10 }, // V Colour
   ];
 
   const headerRow = ws.getRow(1);
@@ -173,6 +177,8 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
       foundQty: r.foundQty ?? '',
       totalNg: r.totalNg ?? '',
       shift: r.shift ?? '',
+      model: r.modelNumber ?? '',
+      colour: r.colour ?? '',
       user: r.telegramUsername ? `@${r.telegramUsername}` : '',
       received: new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Bangkok',

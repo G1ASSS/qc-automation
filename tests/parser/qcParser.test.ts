@@ -335,4 +335,23 @@ Total NG=400pcs`;
     expect(r.data.qcResult).toBe('OK');
   });
 
+  it('30. parses Factory 1 laminate report with model and colour', () => {
+    const msg = "IPQC Random Check 7/10/2026 Factory 1  Laminate\nTime : 10:22\nModel number : 1220*2440*12mm\nMachine Number: 5\nColour:OA\nRandom inspection : 10Pcs\nQC Check Ok";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-10-07');
+    expect(r.data.inspectionType).toBe('IPQC Random Check');
+    expect(r.data.factory).toBe('Factory 1');
+    expect(r.data.process).toBe('Laminate');
+    expect(r.data.jobNumber).toBe('1220*2440*12mm');
+    expect(r.data.number).toBe(null);
+    expect(r.data.machineNumber).toBe('5');
+    expect(r.data.modelNumber).toBe('1220*2440*12mm');
+    expect(r.data.colour).toBe('OA');
+    expect(r.data.inspectionTime).toBe('10:22');
+    expect(r.data.qcResult).toBe('OK');
+    expect(r.data.inspectionQty).toBe(10);
+  });
+
 });

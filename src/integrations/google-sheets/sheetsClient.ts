@@ -24,6 +24,8 @@ export const SHEET_HEADERS = [
   'Shift',
   'Telegram User',
   'Received At',
+  'Model Number',
+  'Colour',
 ] as const;
 
 /** Grid width used for reads/writes (A:AB): wider than the 20 real columns so
@@ -111,6 +113,8 @@ export interface SheetRowInput {
   status: string | null;
   telegramUsername: string | null;
   receivedAt: Date;
+  modelNumber?: string | null;
+  colour?: string | null;
   defectRemark: string | null;
   shift: string | null;
   inspectionQty: number | null;
@@ -150,6 +154,8 @@ export function toSheetValues(input: SheetRowInput): unknown[][] {
       input.shift ?? '', // R Shift
       input.telegramUsername ? `@${input.telegramUsername}` : '', // S Telegram User
       received, // T Received At
+      input.modelNumber ?? '', // U Model Number
+      input.colour ?? '', // V Colour
     ],
   ];
 }
@@ -159,13 +165,13 @@ export async function ensureHeaderRow(): Promise<void> {
   const sheetId = config.googleSheetId;
   if (!sheets || !sheetId) return;
   const tab = config.googleSheetTab;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: `${tab}!A1:T1` });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: `${tab}!A1:V1` });
   const firstRow = res.data.values?.[0] as string[] | undefined;
   const expected = [...SHEET_HEADERS];
   if (!firstRow || firstRow.join('|') !== expected.join('|')) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `${tab}!A1:T1`,
+      range: `${tab}!A1:V1`,
       valueInputOption: 'RAW',
       requestBody: { values: [expected] },
     });
@@ -202,7 +208,7 @@ async function appendInner(input: SheetRowInput): Promise<number | null> {
     }
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `${tab}!A${n}:T${n}`,
+      range: `${tab}!A${n}:V${n}`,
       // RAW: preserve exact text (e.g. Number "00892496" keeps leading zeros).
       valueInputOption: 'RAW',
       requestBody: { values },

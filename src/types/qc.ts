@@ -10,6 +10,10 @@ export interface ParsedQCData {
   /** Identifier as written, e.g. "00892496" (leading zeros preserved) */
   number: string | null;
   machineNumber: string | null;
+  /** Laminate model/size, e.g. "1220*2440*12mm" (null when not given) */
+  modelNumber: string | null;
+  /** Laminate colour code, e.g. "OA" (null when not given) */
+  colour: string | null;
   /** HH:MM (24h) or null */
   inspectionTime: string | null;
   qcCheck: string | null;

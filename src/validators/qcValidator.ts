@@ -8,6 +8,8 @@ export const ParsedQCDataSchema = z.object({
   jobNumber: z.string().min(1).max(100),
   number: z.string().max(50).nullable(),
   machineNumber: z.string().max(50).nullable(),
+  modelNumber: z.string().max(100).nullable(),
+  colour: z.string().max(50).nullable(),
   inspectionTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'inspectionTime must be HH:MM')

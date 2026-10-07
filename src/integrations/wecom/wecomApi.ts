@@ -53,6 +53,8 @@ export function buildRobotMarkdown(d: {
   process: string | null;
   jobNumber: string;
   machineNumber: string | null;
+  modelNumber?: string | null;
+  colour?: string | null;
   inspectionTime: string | null;
   qcResult: string | null;
   status: string | null;
@@ -70,6 +72,8 @@ export function buildRobotMarkdown(d: {
     `Factory: ${d.factory}`,
     `Process: ${d.process ?? '-'}`,
     `Machine: ${d.machineNumber ?? '-'}`,
+    ...(d.modelNumber ? [`Model: ${d.modelNumber}`] : []),
+    ...(d.colour ? [`Colour: ${d.colour}`] : []),
     `Time: ${d.inspectionTime ?? '-'}`,
     `QC Result: ${d.qcResult ?? '-'}`,
     `Status: ${d.status ?? '-'}`,

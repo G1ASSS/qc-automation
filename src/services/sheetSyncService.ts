@@ -34,6 +34,8 @@ export async function syncOneRecordToSheets(id: string): Promise<void> {
         jobNumber: rec.jobNumber,
         number: rec.number,
         machineNumber: rec.machineNumber,
+        modelNumber: rec.modelNumber,
+        colour: rec.colour,
         inspectionTime: rec.inspectionTime,
         qcCheck: rec.qcCheck,
         qcResult: rec.qcResult,

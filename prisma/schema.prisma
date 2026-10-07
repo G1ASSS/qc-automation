@@ -25,6 +25,8 @@ model QcInspection {
   jobNumber        String   @map("job_number")
   number           String?
   machineNumber    String?  @map("machine_number")
+  modelNumber      String?  @map("model_number")
+  colour           String?
   inspectionTime   String?  @map("inspection_time")
   qcCheck          String?  @map("qc_check")
   qcResult         String?  @map("qc_result")

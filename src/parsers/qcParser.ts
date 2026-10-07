@@ -172,6 +172,7 @@ export function parseQCMessage(message: string): ParseResult {
       t = t.replace(DATE_TOKEN_RE, ' ');
       t = normalizeSpaces(stripLeadingSymbols(t));
       t = stripTrailingPeriod(t);
+      t = normalizeSpaces(t.replace(/\s*Factory\s*\d+.*$/i, "").trim());
       inspectionType = t || null;
     }
   }
@@ -218,6 +219,13 @@ export function parseQCMessage(message: string): ParseResult {
       }
     }
   }
+  // Laminate reports carry a Model number instead of a Job number: use it as the job key.
+  if (!jobNumber) {
+    for (const line of cleaned) {
+      const m = /model\s*(?:number|no\.?)?\s*[:=\-]\s*(\S+)/i.exec(line);
+      if (m) { jobNumber = stripTrailingPeriod(m[1].trim()).slice(0, 100); break; }
+    }
+  }
 
   // ---------- Machine number ----------
   let machineNumber: string | null = null;
@@ -233,11 +241,30 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
 
+  // ---------- Model number + colour (laminate) ----------
+  let modelNumber: string | null = null;
+  let colour: string | null = null;
+  for (const line of cleaned) {
+    if (modelNumber && colour) break;
+    const lowM = line.toLowerCase();
+    if (!modelNumber && lowM.includes("model")) {
+      const m = /model\s*(?:number|no\.?)?\s*[:=\-]\s*(\S+)/i.exec(line);
+      if (m) modelNumber = stripTrailingPeriod(m[1].trim()).slice(0, 100);
+    }
+    if (!colour && /colou?r/i.test(line)) {
+      const m = /colou?r\s*[:=\-]?\s*(\S+)/i.exec(line);
+      if (m) {
+        const val = stripTrailingPeriod(m[1].trim()).slice(0, 50);
+        if (val && !/^[-\u2014\s]*$/.test(val)) colour = val;
+      }
+    }
+  }
+
   // ---------- Number (identifier — keep exact text incl. leading zeros, e.g. "00892496") ----------
   let number: string | null = null;
   for (const line of cleaned) {
     const low = line.toLowerCase();
-    if (low.includes('machine') || low.includes('job')) continue;
+    if (low.includes('machine') || low.includes('job') || low.includes('model')) continue;
     let m = /^number\s*[:=\-.]?\s*(\d+)/i.exec(line);
     if (!m) m = /\bnumber\s*[:=\-]\s*(\d+)/i.exec(line);
     if (!m) m = /\bqty\b\s*[:=\-]?\s*(\d+)/i.exec(line);
@@ -470,6 +497,8 @@ export function parseQCMessage(message: string): ParseResult {
     jobNumber,
     number,
     machineNumber,
+    modelNumber,
+    colour,
     inspectionTime,
     qcCheck,
     qcResult,

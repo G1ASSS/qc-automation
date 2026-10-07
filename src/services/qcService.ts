@@ -26,6 +26,8 @@ export async function createQcInspection(input: CreateQcInput): Promise<{ record
         jobNumber: input.jobNumber,
         number: input.number,
         machineNumber: input.machineNumber,
+        modelNumber: input.modelNumber,
+        colour: input.colour,
         inspectionTime: input.inspectionTime,
         qcCheck: input.qcCheck,
         qcResult: input.qcResult,

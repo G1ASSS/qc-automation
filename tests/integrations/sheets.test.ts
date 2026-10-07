@@ -11,12 +11,12 @@ import {
 import { formatBangkok, formatDateForDisplay } from '../../src/utils/timezone.js';
 
 describe('sheets mapping', () => {
-  it('has the 20 required columns in order', () => {
+  it('has the 22 required columns in order', () => {
     expect([...SHEET_HEADERS]).toEqual([
       'Date', 'Inspection Type', 'Factory', 'Process', 'Job Number', '',
       'Number', '', 'QC Check', 'Machine No', 'QC Result', 'Time', 'Status',
       'Defect / Remark', 'Inspection Qty', 'Found Qty', 'Total NG', 'Shift',
-      'Telegram User', 'Received At',
+      'Telegram User', 'Received At', 'Model Number', 'Colour',
     ]);
   });
 
@@ -49,7 +49,7 @@ describe('sheets mapping', () => {
       'IPQC Random Inspection', 'Factory 2', 'Row hole', 'TD-HM-014', '', '4', '', 1, '23', 'OK', '15:03', 'Unfinished',
       'scratch 5pcs',
     ]);
-    expect(row).toHaveLength(20);
+    expect(row).toHaveLength(22);
     expect(row[18]).toBe('@qc_user');
     expect(typeof row[19]).toBe('string');
   });
@@ -125,7 +125,7 @@ describe('sheets mapping', () => {
   it('rescues shifted rows back to A-T', () => {
     const shifted = ['', '', '', '', '', '', '', '', '16/09/2026', 'IPQC', 'Factory 1', 'Row hole', 'ZW-89', '', '200', '', '1', '50', 'OK', '02:11', '', '', '', '', '', '', '@u', '16/09/2026, 03:27'];
     const fixed = rescueShiftedRow(shifted) as unknown[];
-    expect(fixed).toHaveLength(20);
+    expect(fixed).toHaveLength(22);
     expect(fixed.slice(0, 5)).toEqual(['16/09/2026', 'IPQC', 'Factory 1', 'Row hole', 'ZW-89']);
     expect(fixed[6]).toBe('200');
     expect(sheetRowKey(fixed)).toBe('16/09/2026|ZW-89|02:11|16/09/2026, 03:27');
