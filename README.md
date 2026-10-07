@@ -46,6 +46,7 @@ Run tests: `npm test`. Typecheck: `npm run lint`. Build: `npm run build`.
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `TELEGRAM_BOT_TOKEN` | yes (prod) | BotFather token — never commit |
 | `TELEGRAM_WEBHOOK_SECRET` | yes (prod) | `X-Telegram-Bot-Api-Secret-Token` check |
+| `ADMIN_TOKEN` | no | Manager delete APIs (auto-generated on Render; paste into website when asked) |
 | `PUBLIC_BASE_URL` | yes (prod) | e.g. `https://qc.example.com` for webhook registration |
 | `GOOGLE_SHEET_ID` | yes (sheets) | Target spreadsheet ID |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | yes (sheets) | Raw JSON (or base64) of service-account key; or set `GOOGLE_SERVICE_ACCOUNT_KEY_FILE` |
