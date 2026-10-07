@@ -354,4 +354,88 @@ Total NG=400pcs`;
     expect(r.data.inspectionQty).toBe(10);
   });
 
+  it('31. parses Factory 3 paint paren job with Random Number qty', () => {
+    const msg = "IPQC Random Inspection 17/09/2026Factory 3 Paint Line B\nJob Number: TD-SWF-452(3)\nTime:18:43\nRandom Number: 10 pcs.\nQC Check Ok";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.jobNumber).toBe('TD-SWF-452');
+    expect(r.data.number).toBe('3');
+    expect(r.data.inspectionQty).toBe(10);
+    expect(r.data.qcResult).toBe('OK');
+  });
+
+  it('32. parses slash job and ignores wooden list, bare Check lines give OK', () => {
+    const msg = "IPQC Random Inspectionu 07/10/2026\nFactory2 Packing\nRandom check time: 19:50\nJob Number:JV11574WH/(ZW-08)\nNumber of wooden in box- 1,2,3,4,5\nCheck 100%= 1 pcs.\nCheck ok .";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.jobNumber).toBe('JV11574WH');
+    expect(r.data.number).toBe('ZW-08');
+    expect(r.data.inspectionTime).toBe('19:50');
+    expect(r.data.qcResult).toBe('OK');
+  });
+
+  it('33. parses woodworking task with unlabeled slash code and total-checks qty', () => {
+    const msg = "07/10/2026\nAdditional woodworking tasks.\nTime: 19:10\nRandom inspection task code:\nHV10826FG/(DS-47)\nTotal number of random checks: 11BOX\n(OK):11\n(NG):";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.factory).toBe('Factory 2');
+    expect(r.data.jobNumber).toBe('HV10826FG');
+    expect(r.data.number).toBe('DS-47');
+    expect(r.data.inspectionQty).toBe(11);
+  });
+
+  it('34. parses Machine at: and cleans dotted QC detail', () => {
+    const msg = "IPQC Random Inspection 23/09/2026\nFactory 2 Cutting\nJob Number:YS-14\n Time:23 :10\nNumber: 7:Machine at:2\n QC check. 100% = 1 Pcs\nQC Check Ok.";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.number).toBe('7');
+    expect(r.data.machineNumber).toBe('2');
+    expect(r.data.inspectionTime).toBe('23:10');
+    expect(r.data.qcCheck).toBe('100% = 1 Pcs');
+  });
+
+  it('35. parses same-line Number and Machine with night time', () => {
+    const msg = "IPQC Random Inspection 07/ 10/ 2026\nFactory 2Row hole\nJob Number:CT-126\nNumber: 3 Machine No:11\nTime: 22:35\nQC  check100%=1Pcs\nQC check Ok.";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.number).toBe('3');
+    expect(r.data.machineNumber).toBe('11');
+    expect(r.data.inspectionTime).toBe('22:35');
+  });
+
+  it('36. leaves Not Finished unmarked on hole-line spot checks', () => {
+    const msg = "IPQC Random Inspection 23/ 09/ 2026\nFactory 2Row hole\nJob Number:SG-95\nNumber: 10 Machine No:1\nTime: 18:00\nQC  check=1pcs\nQC check Ok.\nNot Finished.";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.qcResult).toBe('OK');
+    expect(r.data.status).toBe(null);
+  });
+
+  it('37. parses Manchine typo and sentence Check Ok with notes ignored', () => {
+    const msg = "IPQC Random Inspection 07/10/2026\nFactory 3 Cutting Line\nJob Number: TD-SWF-102(6)\nManchine No:5\nTime: 19:15\nRandom All:10 pcs\nCutting workpiece Specification can be standard according to the Drawing  Check  Ok.";
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.machineNumber).toBe('5');
+    expect(r.data.number).toBe('6');
+    expect(r.data.qcResult).toBe('OK');
+    expect(r.data.defectRemark).toBe(null);
+  });
+  it('38. keeps free-text paren content and comma numbers', () => {
+    const a = parseQCMessage("Job Number: TD-SWF-102(2,B)\nIPQC 07/09/2026\nFactory 3 Paint Line B\nTime:19:12\nRandom Number: 10 pcs.\nQC Check Ok");
+    expect(a.success).toBe(true);
+    if (!a.success) throw new Error(JSON.stringify(a.errors));
+    expect(a.data.jobNumber).toBe('TD-SWF-102');
+    expect(a.data.number).toBe('2,B');
+    const b = parseQCMessage('Job Number:BY004S4(bicycle wheel 18" blue)\nIPQC 07/09/2026\nFactory 3 Paint Line A\nTime:18:51\nRandom Number: 30 pcs.\nQC Check Ok');
+    expect(b.success).toBe(true);
+    if (!b.success) throw new Error(JSON.stringify(b.errors));
+    expect(b.data.number).toBe('bicycle wheel 18" blue');
+  });
 });

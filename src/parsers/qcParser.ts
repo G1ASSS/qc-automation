@@ -189,12 +189,30 @@ export function parseQCMessage(message: string): ParseResult {
       break;
     }
   }
+  // Default plant: some task formats (e.g. woodworking) carry no Factory line.
+  if (!factory) factory = 'Factory 2';
 
   // ---------- Job number ----------
   let jobNumber: string | null = null;
+  let jobSuffixNumber: string | null = null;
   for (const line of cleaned) {
+    // Suffixed: "Job: JV11574WH/(ZW-08)" (slash form) or "Job: TD-SWF-102(2,B)" (paren form).
+    let m = /job\s*(?:number|no\.?|#)?\s*[:=\-]\s*([A-Za-z0-9][A-Za-z0-9\-_\/\.]*?)\s*\/\(\s*([^)]+?)\s*\)\s*$/i.exec(line);
+    if (m && /job/i.test(line)) {
+      jobNumber = stripTrailingPeriod(m[1].trim()).replace(/[),;\/]+$/, "");
+      const suf = normalizeSpaces(stripTrailingPeriod(m[2].trim()));
+      if (suf) jobSuffixNumber = suf;
+      break;
+    }
+    m = /job\s*(?:number|no\.?|#)?\s*[:=\-]\s*([A-Za-z0-9][^\(]*?)\s*\(\s*([^)]+?)\s*\)\s*$/i.exec(line);
+    if (m && /job/i.test(line)) {
+      jobNumber = stripTrailingPeriod(m[1].trim()).replace(/[),;\/]+$/, "");
+      const suf = normalizeSpaces(stripTrailingPeriod(m[2].trim()));
+      if (suf) jobSuffixNumber = suf;
+      break;
+    }
     // Primary: "Job Number: X", "Job No: X", "Job #: X", "Job: X"
-    let m = /job\s*(?:number|no\.?|#)?\s*[:=\-]\s*([A-Za-z0-9][A-Za-z0-9\-_/\\.]*)/i.exec(line);
+    m = /job\s*(?:number|no\.?|#)?\s*[:=\-]\s*([A-Za-z0-9][A-Za-z0-9\-_/\\.]*)/i.exec(line);
     if (m && /job/i.test(line)) {
       jobNumber = stripTrailingPeriod(m[1].trim()).replace(/[),;]+$/, '');
       break;
@@ -202,6 +220,13 @@ export function parseQCMessage(message: string): ParseResult {
   }
   if (!jobNumber) {
     for (const line of cleaned) {
+      const u = /^([A-Za-z0-9][A-Za-z0-9\-_\.]*?)\s*\/\(\s*([^)]+?)\s*\)$/.exec(line);
+      if (u) {
+        jobNumber = stripTrailingPeriod(u[1].trim());
+        const suf = normalizeSpaces(stripTrailingPeriod(u[2].trim()));
+        if (suf) jobSuffixNumber = suf;
+        break;
+      }
       if (/job\s*(?:number|no\.?|#)?\s*[:=\-]/i.test(line)) continue; // labeled line already handled above (incl. "-" = no job)
       const m = /job\s*(?:number|no\.?)?\s+([A-Za-z0-9][A-Za-z0-9\-_/\\.]*)/i.exec(line);
       if (m) {
@@ -230,8 +255,8 @@ export function parseQCMessage(message: string): ParseResult {
   // ---------- Machine number ----------
   let machineNumber: string | null = null;
   for (const line of cleaned) {
-    if (!/machine/i.test(line)) continue;
-    const m = /machine\s*(?:no\.?|number|#)?\s*[:=\-.]?\s*(.+)/i.exec(line);
+    if (!/man?chine/i.test(line)) continue;
+    const m = /man?chine\s*(?:no\.?|number|#|at)?\s*[:=\-.]?\s*(.+)/i.exec(line);
     if (m) {
       const val = stripTrailingPeriod(m[1].trim()).slice(0, 50);
       if (!val || /^[-\u2014\s]*$/.test(val)) { machineNumber = null; break; }
@@ -264,8 +289,17 @@ export function parseQCMessage(message: string): ParseResult {
   let number: string | null = null;
   for (const line of cleaned) {
     const low = line.toLowerCase();
-    if (low.includes('machine') || low.includes('job') || low.includes('model')) continue;
-    let m = /^number\s*[:=\-.]?\s*(\d+)/i.exec(line);
+    let m = null;
+    if (!/^number\s+of\b/i.test(line)) {
+      const nm = /^number\s*[:=\-.]?\s*([^\s:;]+)/i.exec(line);
+      if (nm) {
+        const val = stripTrailingPeriod(nm[1].trim());
+        if (val && !/^[-\u2014\s]*$/.test(val)) { number = val; }
+      }
+    }
+    if (number != null) break;
+    if (low.includes('machine') || low.includes('job') || low.includes('model') || /\brandom\b/i.test(line)) continue;
+    m = /^number\s*[:=\-.]?\s*(\d+)/i.exec(line);
     if (!m) m = /\bnumber\s*[:=\-]\s*(\d+)/i.exec(line);
     if (!m) m = /\bqty\b\s*[:=\-]?\s*(\d+)/i.exec(line);
     if (!m) m = /\bquantity\s*[:=\-]?\s*(\d+)/i.exec(line);
@@ -274,6 +308,7 @@ export function parseQCMessage(message: string): ParseResult {
       break;
     }
   }
+  if (number == null) number = jobSuffixNumber;
 
   // ---------- Time ----------
   let inspectionTime: string | null = null;
@@ -316,7 +351,8 @@ export function parseQCMessage(message: string): ParseResult {
     if (inspectionQty == null) {
       // Skip date lines so the day of "Inspection 15/09/2026" is never read as a quantity
       if (!findDate(line)) {
-        const m = /(?:qc\s+)?random\s*(?:inspection|check)?\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?)?/i.exec(line);
+        let m = /(?:qc\s+)?random\s*(?:inspection|check|number|all)?\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?|box)?/i.exec(line);
+        if (!m) m = /total\s*(?:number\s+of\s+)?random\s*(?:checks?|inspections?)?\s*[:=\-]?\s*(\d+)/i.exec(line);
         if (m) inspectionQty = Number(m[1]);
       }
     }
@@ -339,17 +375,21 @@ export function parseQCMessage(message: string): ParseResult {
   let qcResult: string | null = null;
 
   for (const line of cleaned) {
-    if (!QC_CHECK_RE.test(line)) continue;
+    const isQcCheck = QC_CHECK_RE.test(line);
+    const isBareCheck = !isQcCheck && (/\bcheck\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\s*\.?$/i.test(line) || /^check\b/i.test(line));
+    if (!isQcCheck && !isBareCheck) continue;
     // Result-style: "QC check Ok." / "QC check: NG" / "QC check PASS"
-    const rm = /qc\s*[-:]?\s*check\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\.?$/i.exec(line);
+    let rm: RegExpExecArray | null = /qc\s*[-:]?\s*check\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\.?$/i.exec(line);
+    if (!rm) rm = /\bcheck\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\s*\.?$/i.exec(line);
     if (rm) {
       if (!qcResult) qcResult = normalizeLabel(rm[1]);
       continue;
     }
     // Detail-style: "QC check 100%=1pc." — remainder is the check value.
-    const dm = /qc\s*[-:]?\s*check\s*[:=\-]?\s*(.+)/i.exec(line);
+    let dm: RegExpExecArray | null = isQcCheck ? /qc\s*[-:]?\s*check\s*[:=\-]?\s*(.+)/i.exec(line) : /^check\s*[:=\-.]*\s*(.+)/i.exec(line);
+    if (dm && !isQcCheck && !/[\d%]/.test(dm[1])) dm = null; // bare prose, not data
     if (dm && !qcCheck) {
-      const val = normalizeSpaces(dm[1].trim());
+      const val = normalizeSpaces(dm[1].trim()).replace(/^[:=\-.,\s]+/, '');
       // Guard: if remainder itself is just ok/ng (handled above with period variants), treat as result.
       if (/^(ok|ng|pass|fail|good|bad)\.?$/i.test(val)) {
         if (!qcResult) qcResult = normalizeLabel(val);

@@ -20,6 +20,7 @@ export function lineFor(process: string | null | undefined): LineKey {
   if (/clean/.test(p)) return 'cleaning';
   if (/pack/.test(p)) return 'packing';
   if (/special/.test(p)) return 'special';
+  if (/drill/i.test(p)) return 'hole'; // Drilling = Hole
   if (/hole/.test(p)) return 'hole';
   return 'special';
 }
