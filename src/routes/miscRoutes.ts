@@ -27,7 +27,11 @@ miscRouter.get('/api/admin/failed', async (req, res, next) => {
     const rows = await prisma.failedMessage.findMany({ orderBy: { createdAt: 'desc' }, take: limit });
     res.json({
       ok: true,
-      data: rows.map((r) => ({ ...r, telegramChatId: r.telegramChatId ? String(r.telegramChatId) : null })),
+      data: rows.map((r) => ({
+        ...r,
+        telegramChatId: r.telegramChatId != null ? String(r.telegramChatId) : null,
+        telegramUserId: r.telegramUserId != null ? String(r.telegramUserId) : null,
+      })),
     });
   } catch (err) {
     next(err);
