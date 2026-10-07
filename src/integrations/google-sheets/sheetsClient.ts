@@ -122,8 +122,8 @@ export interface SheetRowInput {
   totalNg: number | null;
 }
 
-export function toSheetValues(input: SheetRowInput): unknown[][] {
-  const received = new Intl.DateTimeFormat('en-GB', {
+export function formatReceivedBangkok(d: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Bangkok',
     day: '2-digit',
     month: '2-digit',
@@ -131,7 +131,11 @@ export function toSheetValues(input: SheetRowInput): unknown[][] {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(input.receivedAt);
+  }).format(d);
+}
+
+export function toSheetValues(input: SheetRowInput): unknown[][] {
+  const received = formatReceivedBangkok(input.receivedAt);
   return [
     [
       toDisplayDate(input.inspectionDate), // A Date
@@ -329,10 +333,67 @@ export function rescueShiftedRow(row: unknown[]): unknown[] {
   return tail.slice(0, SHEET_HEADERS.length);
 }
 
-/** Identity of a placed row for duplicate logging (never used to delete). */
+/** Identity of a placed row (Date|Job|Time|Received). */
 export function sheetRowKey(row: unknown[]): string {
   const c = (i: number): string => String((row as unknown[])[i] ?? '').trim();
   return `${c(0)}|${c(4)}|${c(11)}|${c(19)}`; // Date|Job|Time|Received
+}
+
+/** Build the sheet key for a database record (same shape as sheetRowKey). */
+export function dbRowSheetKey(rec: {
+  inspectionDate: Date | string;
+  jobNumber: string;
+  inspectionTime: string | null;
+  receivedAt: Date;
+}): string {
+  const iso = rec.inspectionDate instanceof Date ? rec.inspectionDate.toISOString().slice(0, 10) : String(rec.inspectionDate).slice(0, 10);
+  return `${toDisplayDate(iso)}|${(rec.jobNumber ?? '').trim()}|${(rec.inspectionTime ?? '').trim()}|${formatReceivedBangkok(rec.receivedAt)}`;
+}
+
+async function getTabSheetId(tab: string): Promise<number | null> {
+  const sheets = getSheetsClient();
+  const sheetId = config.googleSheetId;
+  if (!sheets || !sheetId) return null;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId, fields: 'sheets.properties' });
+  const found = (meta.data.sheets ?? []).find((s) => s.properties?.title === tab);
+  return found?.properties?.sheetId ?? null;
+}
+
+/** Delete sheet data rows matching the given keys (first match per key).
+ *  Returns how many rows were removed. Serialized with other sheet writes. */
+export async function removeSheetRowsByKeys(keys: string[]): Promise<number> {
+  if (keys.length === 0) return 0;
+  return runSheetsExclusive(async () => {
+    const sheets = getSheetsClient();
+    const sheetId = config.googleSheetId;
+    if (!sheets || !sheetId) throw new Error('Sheets not configured');
+    const rows = await readDataRows();
+    if (!rows || rows.length === 0) return 0;
+    const remaining = new Set(keys);
+    const targets: number[] = [];
+    rows.forEach((r, i) => {
+      if (remaining.size === 0) return;
+      const k = sheetRowKey(r);
+      if (remaining.has(k)) {
+        remaining.delete(k);
+        targets.push(i + 2); // 1-based sheet row (header is row 1)
+      }
+    });
+    if (targets.length === 0) return 0;
+    const tabId = await getTabSheetId(config.googleSheetTab);
+    if (tabId == null) throw new Error('Sheet tab not found');
+    targets.sort((a, b) => b - a); // bottom-up so positions stay valid
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: sheetId,
+      requestBody: {
+        requests: targets.map((row) => ({
+          deleteDimension: { range: { sheetId: tabId, dimension: 'ROWS', startIndex: row - 1, endIndex: row } },
+        })),
+      },
+    });
+    logger.info({ removed: targets.length }, 'Google Sheets rows deleted by key');
+    return targets.length;
+  });
 }
 
 /** Comparator shared by sortSheetRows and flag bookkeeping (must stay identical). */

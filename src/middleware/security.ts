@@ -25,6 +25,27 @@ export function chatAllowlistLog(chatId: number | string): boolean {
   return allow.includes(String(chatId));
 }
 
+/** Shared-secret gate for destructive admin APIs. Pass
+ *  `Authorization: Bearer <ADMIN_TOKEN>` or `?token=<ADMIN_TOKEN>`.
+ *  Responds 503 when ADMIN_TOKEN is not configured, 403 on mismatch. */
+export function requireAdminToken(req: Request, res: Response): boolean {
+  const expected = process.env.ADMIN_TOKEN;
+  if (!expected) {
+    res.status(503).json({ ok: false, error: 'admin_token_not_configured' });
+    return false;
+  }
+  const header = req.header('authorization') ?? '';
+  const bearer = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const query = typeof req.query.token === 'string' ? req.query.token : '';
+  const got = bearer || query;
+  if (got !== expected) {
+    logger.warn('Rejected admin API call: bad token');
+    res.status(403).json({ ok: false, error: 'forbidden' });
+    return false;
+  }
+  return true;
+}
+
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
   logger.error({ err }, 'Unhandled API error');
   if (res.headersSent) return;
