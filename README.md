@@ -61,7 +61,7 @@ Run tests: `npm test`. Typecheck: `npm run lint`. Build: `npm run build`.
 - `GET /ready` — readiness probe (503 when DB down)
 - `POST /webhooks/telegram` — Telegram webhook (secret-token verified)
 - `GET /api/qc?date=2026-09-15&factory=Factory%202&status=Unfinished&jobNumber=TD-HM-014&machineNumber=23` — filtered list
-- `GET /api/qc/export.xlsx?...same filters` — real `.xlsx` (frozen header, filters, borders, auto widths), `QC_Report_YYYY-MM-DD.xlsx`
+- `GET /api/qc/export.xlsx?...same filters` + `GET /api/qc/export-night.xlsx?date=...` (night 20:00-08:00 file) — real `.xlsx` (frozen header, filters, borders, auto widths), `QC_Report_YYYY-MM-DD.xlsx`
 - `POST /api/admin/telegram/set-webhook` — body `{ "url": "https://host" }` or uses `PUBLIC_BASE_URL`
 - `POST /api/admin/telegram/delete-webhook`
 - `GET /api/admin/stats` / `/api/admin/failed` / `/api/admin/pending-sync`

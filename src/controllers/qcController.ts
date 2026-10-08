@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { QcFilterSchema } from '../validators/qcValidator.js';
 import { listQcInspections, serializeQcRow } from '../services/qcService.js';
-import { buildQcWorkbook, qcReportFileName } from '../services/excelExportService.js';
+import { buildQcWorkbook, qcReportFileName, buildNightWorkbook, qcNightFileName } from '../services/excelExportService.js';
 import { buildDailySummary, buildNightSummary } from '../services/summaryService.js';
 import { prisma } from '../database/prisma.js';
 import { dbRowSheetKey, removeSheetRowsByKeys } from '../integrations/google-sheets/sheetsClient.js';
@@ -125,4 +125,20 @@ export async function deleteManyHandler(req: Request, res: Response): Promise<vo
   }
   logger.info({ count: rows.length, sheetRemoved }, 'QC inspections bulk deleted');
   res.json({ ok: true, deleted: rows.length, sheetRemoved });
+}
+
+export async function exportNightHandler(req: Request, res: Response): Promise<void> {
+  const raw = typeof req.query.date === 'string' ? req.query.date : todayBangkokISO();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    res.status(400).json({ ok: false, error: 'date must be YYYY-MM-DD' });
+    return;
+  }
+  const u = typeof req.query.user === 'string' ? req.query.user : undefined;
+  const sh = typeof req.query.shift === 'string' ? req.query.shift : undefined;
+  logger.info({ date: raw }, 'Export request: building night .xlsx');
+  const wb = await buildNightWorkbook(raw, u, sh);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${qcNightFileName(raw)}"`);
+  await wb.xlsx.write(res);
+  res.end();
 }

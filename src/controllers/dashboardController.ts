@@ -334,6 +334,7 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <label class="field" style="max-width:150px"><svg width="16" height="16"><use href="#i-clock"/></svg><select id="s-shift" aria-label="Summary shift"><option value="">All shifts</option><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option><option value="N">Night</option></select></label>
 <button class="gbtn primary" id="btn-sum"><svg width="16" height="16"><use href="#i-grid"/></svg>Generate</button>
 <button class="gbtn" id="btn-night">Night 20-08</button>
+<button class="gbtn" id="btn-nightxlsx"><svg width="15" height="15"><use href="#i-dl"/></svg>Night .xlsx</button>
 <button class="gbtn" id="btn-copy"><svg width="15" height="15"><use href="#i-copy"/></svg>Copy text</button>
 <button class="gbtn" id="btn-sumtxt"><svg width="15" height="15"><use href="#i-txt"/></svg>Open .txt</button>
 </div>
@@ -498,6 +499,7 @@ if(D.problems.length){h+='<div class="prob-wrap">';for(var p=0;p<Math.min(6,D.pr
 h+='<div class="tot-strip"><div><b>'+D.total+'</b><span>Total</span></div><div><b>'+D.lineCounts.hole+'</b><span>Hole</span></div><div><b>'+D.lineCounts.cutting+'</b><span>Cutting</span></div><div><b>'+D.lineCounts.border+'</b><span>Border</span></div><div class="'+(D.ng?"bad":"")+'"><b>'+D.ng+'</b><span>NG</span></div>'+(D.unfinished?'<div><b>'+D.unfinished+'</b><span>Unfin.</span></div>':"")+'</div>';
 document.getElementById("sum-cards").innerHTML=h;if(S.night&&D.total===0)toast("Empty night - it starts 20:00 on the picked date; for last night pick yesterday")}catch(e){document.getElementById("sum-text").textContent="Failed."}}
 document.getElementById("btn-sum").onclick=loadSummary;
+document.getElementById("btn-nightxlsx").onclick=function(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());var q="date="+d+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):"");toast("Building night file…");window.open("/api/qc/export-night.xlsx?"+q,"_blank")};
 document.getElementById("btn-night").onclick=function(){S.night=!S.night;this.className="gbtn "+(S.night?"primary":"");try{document.getElementById("s-date").value=S.night?nightDefault():sumToday()}catch(e){}loadSummary()};
 document.getElementById("btn-copy").onclick=function(){var v=document.getElementById("sum-text").textContent||"";var btn=this;if(navigator.clipboard){navigator.clipboard.writeText(v).then(function(){toast("Summary copied - paste to Telegram");btn.innerHTML="Copied";setTimeout(function(){btn.innerHTML="Copy text"},1600)})}else{toast("Copy not supported")}};
 document.getElementById("btn-sumtxt").onclick=function(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());window.open(sumPath()+d+"&format=text"+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):""),"_blank")};

@@ -94,6 +94,110 @@ const HEADERS = [
   'Colour',
 ];
 
+function fillWorksheet(ws: ExcelJS.Worksheet, rows: Awaited<ReturnType<typeof prisma.qcInspection.findMany>>): void {
+  for (const r of rows) {
+    const iso = r.inspectionDate.toISOString().slice(0, 10);
+    const isNg = (r.qcResult ?? '').toUpperCase() === 'NG';
+    const row = ws.addRow({
+      date: formatDateForDisplay(iso),
+      type: r.inspectionType,
+      factory: r.factory,
+      process: r.process ?? '',
+      job: r.jobNumber,
+      blank1: '',
+      number: r.number ?? '',
+      blank2: '',
+      qcCheck: qcCheckDisplay(r.qcCheck),
+      machine: r.machineNumber ?? '',
+      qcResult: r.qcResult ?? '',
+      time: r.inspectionTime ?? '',
+      status: r.status ?? '',
+      defect: r.defectRemark ?? '',
+      inspectionQty: r.inspectionQty ?? '',
+      foundQty: r.foundQty ?? '',
+      totalNg: r.totalNg ?? '',
+      shift: r.shift ?? '',
+      model: r.modelNumber ?? '',
+      colour: r.colour ?? '',
+      user: r.telegramUsername ? `@${r.telegramUsername}` : '',
+      received: new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Bangkok',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(r.receivedAt),
+    });
+    // Highlight NG rows so problem reports stand out in the export.
+    // Number column as text so leading zeros (e.g. "00892496") survive.
+    row.getCell('number').numFmt = '@';
+    if (isNg) {
+      row.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4E4' } };
+      });
+      row.getCell('qcResult').font = { bold: true, color: { argb: 'FFC00000' } };
+      if (r.totalNg != null) row.getCell('totalNg').font = { bold: true, color: { argb: 'FFC00000' } };
+    }
+  }
+
+  ws.autoFilter = { from: 'A1', to: 'V1' };
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  // Borders + alignment for all data cells
+  const thin: ExcelJS.Border = { style: 'thin', color: { argb: 'FFB0B0B0' } };
+  ws.eachRow((row, rowNumber) => {
+    row.eachCell((cell) => {
+      cell.border = { top: thin, left: thin, bottom: thin, right: thin };
+      if (rowNumber > 1) cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+  });
+
+  // Auto-tune widths (bounded) based on content length (blank spacers stay narrow)
+  const NARROW_BLANK_KEYS = new Set(['blank1', 'blank2']);
+  ws.columns.forEach((col) => {
+    if (NARROW_BLANK_KEYS.has(String((col as { key?: unknown }).key ?? ''))) {
+      col.width = 3;
+      return;
+    }
+    let max = 10;
+    col.eachCell?.({ includeEmpty: true }, (cell) => {
+      const len = String(cell.value ?? '').length;
+      if (len > max) max = len;
+    });
+    col.width = Math.min(32, Math.max(col.width ?? 10, max + 2));
+  });
+
+}
+
+function setupColumns(ws: ExcelJS.Worksheet): void {
+  ws.columns = [
+    { header: HEADERS[0], key: 'date', width: 12 }, // A Date
+    { header: HEADERS[1], key: 'type', width: 24 }, // B Inspection Type
+    { header: HEADERS[2], key: 'factory', width: 12 }, // C Factory
+    { header: HEADERS[3], key: 'process', width: 14 }, // D Process
+    { header: HEADERS[4], key: 'job', width: 14 }, // E Job Number
+    { header: HEADERS[5], key: 'blank1', width: 3 }, // F (blank spacer)
+    { header: HEADERS[6], key: 'number', width: 9 }, // G Number
+    { header: HEADERS[7], key: 'blank2', width: 3 }, // H (blank spacer)
+    { header: HEADERS[8], key: 'qcCheck', width: 18 }, // I QC Check
+    { header: HEADERS[9], key: 'machine', width: 11 }, // J Machine No
+    { header: HEADERS[10], key: 'qcResult', width: 10 }, // K QC Result
+    { header: HEADERS[11], key: 'time', width: 9 }, // L Time
+    { header: HEADERS[12], key: 'status', width: 12 }, // M Status
+    { header: HEADERS[13], key: 'defect', width: 30 }, // N Defect / Remark
+    { header: HEADERS[14], key: 'inspectionQty', width: 13 }, // O Inspection Qty
+    { header: HEADERS[15], key: 'foundQty', width: 10 }, // P Found Qty
+    { header: HEADERS[16], key: 'totalNg', width: 10 }, // Q Total NG
+    { header: HEADERS[17], key: 'shift', width: 8 }, // R Shift
+    { header: HEADERS[18], key: 'user', width: 16 }, // S Telegram User
+    { header: HEADERS[19], key: 'received', width: 18 }, // T Received At
+    { header: HEADERS[20], key: 'model', width: 18 }, // U Model Number
+    { header: HEADERS[21], key: 'colour', width: 10 }, // V Colour
+  ];
+}
+
 export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workbook> {
   const where: Record<string, unknown> = {};
   if (filter.date) {
@@ -147,30 +251,7 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
   wb.created = new Date();
   const ws = wb.addWorksheet('QC Reports');
 
-  ws.columns = [
-    { header: HEADERS[0], key: 'date', width: 12 }, // A Date
-    { header: HEADERS[1], key: 'type', width: 24 }, // B Inspection Type
-    { header: HEADERS[2], key: 'factory', width: 12 }, // C Factory
-    { header: HEADERS[3], key: 'process', width: 14 }, // D Process
-    { header: HEADERS[4], key: 'job', width: 14 }, // E Job Number
-    { header: HEADERS[5], key: 'blank1', width: 3 }, // F (blank spacer)
-    { header: HEADERS[6], key: 'number', width: 9 }, // G Number
-    { header: HEADERS[7], key: 'blank2', width: 3 }, // H (blank spacer)
-    { header: HEADERS[8], key: 'qcCheck', width: 18 }, // I QC Check
-    { header: HEADERS[9], key: 'machine', width: 11 }, // J Machine No
-    { header: HEADERS[10], key: 'qcResult', width: 10 }, // K QC Result
-    { header: HEADERS[11], key: 'time', width: 9 }, // L Time
-    { header: HEADERS[12], key: 'status', width: 12 }, // M Status
-    { header: HEADERS[13], key: 'defect', width: 30 }, // N Defect / Remark
-    { header: HEADERS[14], key: 'inspectionQty', width: 13 }, // O Inspection Qty
-    { header: HEADERS[15], key: 'foundQty', width: 10 }, // P Found Qty
-    { header: HEADERS[16], key: 'totalNg', width: 10 }, // Q Total NG
-    { header: HEADERS[17], key: 'shift', width: 8 }, // R Shift
-    { header: HEADERS[18], key: 'user', width: 16 }, // S Telegram User
-    { header: HEADERS[19], key: 'received', width: 18 }, // T Received At
-    { header: HEADERS[20], key: 'model', width: 18 }, // U Model Number
-    { header: HEADERS[21], key: 'colour', width: 10 }, // V Colour
-  ];
+  setupColumns(ws);
 
   const headerRow = ws.getRow(1);
   headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -178,79 +259,22 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
   headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
   headerRow.height = 22;
 
-  for (const r of rows) {
-    const iso = r.inspectionDate.toISOString().slice(0, 10);
-    const isNg = (r.qcResult ?? '').toUpperCase() === 'NG';
-    const row = ws.addRow({
-      date: formatDateForDisplay(iso),
-      type: r.inspectionType,
-      factory: r.factory,
-      process: r.process ?? '',
-      job: r.jobNumber,
-      blank1: '',
-      number: r.number ?? '',
-      blank2: '',
-      qcCheck: qcCheckDisplay(r.qcCheck),
-      machine: r.machineNumber ?? '',
-      qcResult: r.qcResult ?? '',
-      time: r.inspectionTime ?? '',
-      status: r.status ?? '',
-      defect: r.defectRemark ?? '',
-      inspectionQty: r.inspectionQty ?? '',
-      foundQty: r.foundQty ?? '',
-      totalNg: r.totalNg ?? '',
-      shift: r.shift ?? '',
-      model: r.modelNumber ?? '',
-      colour: r.colour ?? '',
-      user: r.telegramUsername ? `@${r.telegramUsername}` : '',
-      received: new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Asia/Bangkok',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(r.receivedAt),
-    });
-    // Highlight NG rows so problem reports stand out in the export.
-    // Number column as text so leading zeros (e.g. "00892496") survive.
-    row.getCell('number').numFmt = '@';
-    if (isNg) {
-      row.eachCell((cell) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4E4' } };
-      });
-      row.getCell('qcResult').font = { bold: true, color: { argb: 'FFC00000' } };
-      if (r.totalNg != null) row.getCell('totalNg').font = { bold: true, color: { argb: 'FFC00000' } };
-    }
-  }
+  fillWorksheet(ws, rows);  return wb;
+}
 
-  ws.autoFilter = { from: 'A1', to: 'T1' };
-  ws.views = [{ state: 'frozen', ySplit: 1 }];
+export function qcNightFileName(startIso: string): string {
+  return `QC_Night_${startIso}.xlsx`;
+}
 
-  // Borders + alignment for all data cells
-  const thin: ExcelJS.Border = { style: 'thin', color: { argb: 'FFB0B0B0' } };
-  ws.eachRow((row, rowNumber) => {
-    row.eachCell((cell) => {
-      cell.border = { top: thin, left: thin, bottom: thin, right: thin };
-      if (rowNumber > 1) cell.alignment = { vertical: 'middle', wrapText: true };
-    });
-  });
-
-  // Auto-tune widths (bounded) based on content length (blank spacers stay narrow)
-  const NARROW_BLANK_KEYS = new Set(['blank1', 'blank2']);
-  ws.columns.forEach((col) => {
-    if (NARROW_BLANK_KEYS.has(String((col as { key?: unknown }).key ?? ''))) {
-      col.width = 3;
-      return;
-    }
-    let max = 10;
-    col.eachCell?.({ includeEmpty: true }, (cell) => {
-      const len = String(cell.value ?? '').length;
-      if (len > max) max = len;
-    });
-    col.width = Math.min(32, Math.max(col.width ?? 10, max + 2));
-  });
-
+/** Night-shift workbook: rows of the 20:00-08:00 window, same 22-column layout. */
+export async function buildNightWorkbook(startIso: string, username?: string, shift?: string): Promise<ExcelJS.Workbook> {
+  const { fetchNightRows } = await import('./summaryService.js');
+  const { rows } = await fetchNightRows(startIso, username, shift);
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'QC Automation';
+  wb.created = new Date();
+  const ws = wb.addWorksheet(`Night ${startIso}`);
+  setupColumns(ws);
+  fillWorksheet(ws, rows);
   return wb;
 }
