@@ -32,3 +32,34 @@ export function todayBangkokISO(): string {
   }).format(new Date());
   return parts; // en-CA yields YYYY-MM-DD
 }
+
+/** Night-shift codes (case-insensitive). B = night shift observed in production. */
+export const NIGHT_SHIFT_CODES = ['B', 'N', 'NIGHT'];
+
+/** Shift-aware Day/Night partition.
+ *  - 00:00-07:59 is always night (no day work then; day runs 08:00-22:00 max)
+ *  - explicit B/N/NIGHT code is always night
+ *  - any other explicit code is day (trust it over time: covers day overtime to 22:00)
+ *  - without a code: 22:00-23:59 night, 08:00-21:59 day
+ *  - null when no usable time and no night code. */
+export function classifyShift(shift: string | null | undefined, time: string | null | undefined): 'day' | 'night' | null {
+  const s = (shift ?? '').trim().toUpperCase();
+  const tm = time ? /^(\d{1,2}):(\d{2})/.exec(time.trim()) : null;
+  const h = tm ? Number(tm[1]) : null;
+  const validH = h !== null && Number.isInteger(h) && h >= 0 && h <= 23;
+  if (validH && h < 8) return 'night';
+  if (s && NIGHT_SHIFT_CODES.includes(s)) return 'night';
+  if (s) return 'day';
+  if (!validH || h === null) return null;
+  return h >= 22 ? 'night' : 'day';
+}
+
+/** Time-only partition (legacy helper): night = 20:00-07:59. */
+export function dayNightOf(time: string | null | undefined): 'day' | 'night' | null {
+  if (!time) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(time.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  if (!Number.isInteger(h) || h < 0 || h > 23) return null;
+  return h >= 20 || h < 8 ? 'night' : 'day';
+}

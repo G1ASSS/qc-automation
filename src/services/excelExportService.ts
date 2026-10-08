@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { prisma } from '../database/prisma.js';
 import { formatDateForDisplay } from '../utils/timezone.js';
+import { NIGHT_SHIFT_CODES } from '../utils/timezone.js';
 import type { QcFilter } from '../validators/qcValidator.js';
 
 export function qcReportFileName(date = new Date()): string {
@@ -105,6 +106,28 @@ export async function buildQcWorkbook(filter: QcFilter): Promise<ExcelJS.Workboo
   if (filter.jobNumber) where.jobNumber = { equals: filter.jobNumber, mode: 'insensitive' };
   if (filter.machineNumber) where.machineNumber = { equals: filter.machineNumber, mode: 'insensitive' };
   if (filter.status) where.status = { equals: filter.status, mode: 'insensitive' };
+  if (filter.daynight === 'night')
+    where.AND = [{ OR: [
+      { inspectionTime: { lt: '08:00' } },
+      { shift: { in: NIGHT_SHIFT_CODES, mode: 'insensitive' } },
+      { AND: [{ OR: [{ shift: null }, { shift: '' }] }, { inspectionTime: { gte: '22:00' } }] },
+    ] }];
+  if (filter.daynight === 'day')
+    where.AND = [{ OR: [
+      {
+        AND: [
+          { NOT: { OR: [{ shift: null }, { shift: '' }] } },
+          { NOT: { shift: { in: NIGHT_SHIFT_CODES, mode: 'insensitive' } } },
+        ],
+      },
+      {
+        AND: [
+          { OR: [{ shift: null }, { shift: '' }] },
+          { inspectionTime: { gte: '08:00' } },
+          { inspectionTime: { lt: '22:00' } },
+        ],
+      },
+    ] }];
   if ((filter as { user?: string }).user) where.telegramUsername = { equals: (filter as { user?: string }).user!.replace(/^@/, ''), mode: 'insensitive' };
   if ((filter as { shift?: string }).shift) (where as Record<string, unknown>).shift = { equals: (filter as { shift?: string }).shift, mode: 'insensitive' };
 

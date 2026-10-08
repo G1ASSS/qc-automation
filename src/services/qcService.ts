@@ -1,6 +1,7 @@
 import { prisma } from '../database/prisma.js';
 import type { Prisma } from '@prisma/client';
 import { logger } from '../config/logger.js';
+import { NIGHT_SHIFT_CODES } from '../utils/timezone.js';
 import type { ParsedQCData, TelegramMeta } from '../types/qc.js';
 import type { QcFilter } from '../validators/qcValidator.js';
 
@@ -96,6 +97,28 @@ export async function listQcInspections(filter: QcFilter): Promise<{ rows: unkno
   if (filter.inspectionType) where.inspectionType = { contains: filter.inspectionType, mode: 'insensitive' };
   if (filter.user) where.telegramUsername = { equals: filter.user.replace(/^@/, ''), mode: 'insensitive' };
   if (filter.shift) where.shift = { equals: filter.shift, mode: 'insensitive' };
+  if (filter.daynight === 'night')
+    where.AND = [{ OR: [
+      { inspectionTime: { lt: '08:00' } },
+      { shift: { in: NIGHT_SHIFT_CODES, mode: 'insensitive' } },
+      { AND: [{ OR: [{ shift: null }, { shift: '' }] }, { inspectionTime: { gte: '22:00' } }] },
+    ] }];
+  if (filter.daynight === 'day')
+    where.AND = [{ OR: [
+      {
+        AND: [
+          { NOT: { OR: [{ shift: null }, { shift: '' }] } },
+          { NOT: { shift: { in: NIGHT_SHIFT_CODES, mode: 'insensitive' } } },
+        ],
+      },
+      {
+        AND: [
+          { OR: [{ shift: null }, { shift: '' }] },
+          { inspectionTime: { gte: '08:00' } },
+          { inspectionTime: { lt: '22:00' } },
+        ],
+      },
+    ] }];
 
   const [rows, total] = await Promise.all([
     prisma.qcInspection.findMany({

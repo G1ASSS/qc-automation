@@ -36,6 +36,7 @@ export const QcFilterSchema = z.object({
   inspectionType: z.string().max(200).optional(),
   user: z.string().max(100).optional(),
   shift: z.string().max(20).optional(),
+  daynight: z.enum(["day", "night"]).optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),
   offset: z.coerce.number().int().min(0).default(0),
 });
