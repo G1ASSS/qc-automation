@@ -7,3 +7,5 @@ coverage/
 .DS_Store
 google-credentials.json
 service-account*.json
+PROD-BACKUP-*.json
+*.backup.json
