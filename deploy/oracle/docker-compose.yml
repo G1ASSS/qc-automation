@@ -1,0 +1,53 @@
+version: "3.9"
+
+# Oracle Always Free deployment: app + Postgres + Caddy (auto HTTPS).
+# Host is reached via https://<public-ip>.nip.io (no domain needed).
+# Copy this file next to the project as docker-compose.yml, or merge the
+# caddy service into the existing compose file.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qc_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: qc_reports
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qc_user -d qc_reports"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://qc_user:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/qc_reports?schema=public
+      NODE_ENV: production
+      PORT: "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  caddydata:
+  caddyconfig:

@@ -1,0 +1,6 @@
+# Caddy reverse proxy. Replace PUBLIC_HOST with e.g. qc-203-0-113-5.nip.io
+# (dots in the IPv4 address become dashes). Caddy fetches and renews the
+# TLS certificate automatically via HTTP challenge (port 80 must be open).
+{$PUBLIC_HOST} {
+	reverse_proxy app:3000
+}
