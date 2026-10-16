@@ -7,24 +7,62 @@ function baseUrl(): string {
   return `https://api.telegram.org/bot${token}`;
 }
 
-export async function sendTelegramMessage(chatId: number | string, text: string): Promise<void> {
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Send a Telegram message with retries. The database save never depends on
+ *  this succeeding (replies are best-effort); retries cover Telegram 429
+ *  flood-control bursts and transient timeouts that previously dropped
+ *  confirmations while the report itself saved fine. */
+export async function sendTelegramMessage(
+  chatId: number | string,
+  text: string,
+  opts?: { replyTo?: number; attempt?: number },
+): Promise<void> {
   const token = config.telegramBotToken;
   if (!token) {
     logger.warn({ chatId }, 'Skipped Telegram reply: bot token not configured');
     return;
   }
+  const attempt = opts?.attempt ?? 1;
   try {
+    const body: Record<string, unknown> = { chat_id: chatId, text };
+    if (opts?.replyTo) body.reply_to_message_id = opts.replyTo;
     const res = await fetch(`${baseUrl()}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text }),
-      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
     });
+    if (res.status === 429 && attempt < 4) {
+      let waitMs = 3000;
+      try {
+        const data = (await res.json()) as { parameters?: { retry_after?: number } };
+        if (data.parameters?.retry_after) waitMs = Math.min(data.parameters.retry_after * 1000, 12000);
+      } catch { /* fall through with default wait */ }
+      logger.warn({ chatId, attempt, waitMs }, 'Telegram flood control: retrying reply');
+      await sleep(waitMs);
+      await sendTelegramMessage(chatId, text, { replyTo: opts?.replyTo, attempt: attempt + 1 });
+      return;
+    }
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      logger.error({ chatId, status: res.status, body: body.slice(0, 500) }, 'Telegram sendMessage failed');
+      const rbody = await res.text().catch(() => '');
+      if (res.status >= 500 && attempt < 3) {
+        logger.warn({ chatId, status: res.status, attempt }, 'Telegram 5xx: retrying reply');
+        await sleep(2000 * attempt);
+        await sendTelegramMessage(chatId, text, { replyTo: opts?.replyTo, attempt: attempt + 1 });
+        return;
+      }
+      logger.error({ chatId, status: res.status, body: rbody.slice(0, 500) }, 'Telegram sendMessage failed');
     }
   } catch (err) {
+    if (attempt < 3) {
+      logger.warn({ err, chatId, attempt }, 'Telegram send timeout: retrying reply');
+      await sleep(2000 * attempt);
+      await sendTelegramMessage(chatId, text, { replyTo: opts?.replyTo, attempt: attempt + 1 });
+      return;
+    }
     logger.error({ err, chatId }, 'Telegram API failure (sendMessage)');
   }
 }

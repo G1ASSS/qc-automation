@@ -103,7 +103,7 @@ export async function telegramWebhookHandler(req: Request, res: Response): Promi
         missingFields: missing,
         receivedAt,
       });
-      await sendTelegramMessage(chatId, buildFailureReply(missing));
+      await sendTelegramMessage(chatId, buildFailureReply(missing), { replyTo: messageId });
       res.status(200).json({ ok: true, saved: false, errors: missing });
       return;
     }
@@ -121,7 +121,7 @@ export async function telegramWebhookHandler(req: Request, res: Response): Promi
         missingFields: details,
         receivedAt,
       });
-      await sendTelegramMessage(chatId, buildFailureReply(details));
+      await sendTelegramMessage(chatId, buildFailureReply(details), { replyTo: messageId });
       res.status(200).json({ ok: true, saved: false, errors: details });
       return;
     }
@@ -143,7 +143,7 @@ export async function telegramWebhookHandler(req: Request, res: Response): Promi
 
     const rec = record as { id: string };
     enqueueSheetSync(rec.id);
-    await sendTelegramMessage(chatId, buildSuccessReply(zod.data));
+    await sendTelegramMessage(chatId, buildSuccessReply(zod.data), { replyTo: messageId });
     // Mirror to WeCom group (fire-and-forget; no-op when robot key unset).
     void sendWecomRobotMessage(buildRobotMarkdown(zod.data));
     res.status(200).json({ ok: true, saved: true, id: rec.id });
