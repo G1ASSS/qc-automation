@@ -4,6 +4,7 @@ import { deleteWebhookHandler, setWebhookHandler } from '../controllers/adminCon
 import { getDashboardStats } from '../services/commandService.js';
 import { prisma } from '../database/prisma.js';
 import { serializeQcRow } from '../services/qcService.js';
+import { requireAdminToken } from '../middleware/security.js';
 
 export const miscRouter = Router();
 
@@ -46,6 +47,21 @@ miscRouter.get('/api/admin/pending-sync', async (_req, res, next) => {
       take: 100,
     });
     res.json({ ok: true, data: rows.map((r) => serializeQcRow(r as unknown as Record<string, unknown>)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Requeue sheet-sync failures that exhausted their retries (e.g. after the
+ *  underlying cause such as a too-small sheet grid has been fixed). */
+miscRouter.post('/api/admin/sheets/requeue', async (req, res, next) => {
+  if (!requireAdminToken(req, res)) return;
+  try {
+    const result = await prisma.qcInspection.updateMany({
+      where: { sheetSyncStatus: 'FAILED' },
+      data: { sheetSyncStatus: 'PENDING', retryCount: 0, sheetSyncError: null },
+    });
+    res.json({ ok: true, requeued: result.count });
   } catch (err) {
     next(err);
   }

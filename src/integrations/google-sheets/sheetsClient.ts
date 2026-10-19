@@ -197,7 +197,6 @@ async function appendInner(input: SheetRowInput): Promise<number | null> {
   const sheetId = config.googleSheetId;
   if (!sheets || !sheetId) throw new Error('Sheets not configured');
   await ensureHeaderRow();
-  const tab = config.googleSheetTab;
   const values = toSheetValues(input) as string[][];
   // Write at an explicit row. Never use values.append here: once the header
   // contains blank spacer cells, Sheets' append table-detection splits the
@@ -210,13 +209,7 @@ async function appendInner(input: SheetRowInput): Promise<number | null> {
       logger.warn({ row: n, attempt }, 'Sheets target row occupied, re-reading');
       continue;
     }
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: `${tab}!A${n}:V${n}`,
-      // RAW: preserve exact text (e.g. Number "00892496" keeps leading zeros).
-      valueInputOption: 'RAW',
-      requestBody: { values },
-    });
+    await writeRowAt(n, values);
     logger.info({ rowNumber: n, attempt }, 'Sheets row written at explicit position');
     try {
       await tidyInner();
@@ -226,6 +219,78 @@ async function appendInner(input: SheetRowInput): Promise<number | null> {
     return n;
   }
   throw new Error('Sheets target row occupied after retries');
+}
+
+/** Write one row, growing the sheet grid first when it is too short.
+ *  Sheets created with a fixed grid (e.g. 888 rows) reject writes past the
+ *  last row with "exceeds grid limits"; appendDimension expands it. */
+async function writeRowAt(rowNumber: number, values: unknown[][]): Promise<void> {
+  const sheets = getSheetsClient();
+  const spreadsheetId = config.googleSheetId;
+  if (!sheets || !spreadsheetId) throw new Error('Sheets not configured');
+  const range = `${config.googleSheetTab}!A${rowNumber}:V${rowNumber}`;
+  const write = (): Promise<unknown> =>
+    sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range,
+      // RAW: preserve exact text (e.g. Number "00892496" keeps leading zeros).
+      valueInputOption: 'RAW',
+      requestBody: { values },
+    });
+  await ensureGridCapacity(rowNumber);
+  try {
+    await write();
+  } catch (err) {
+    // Another client may have shrunk/replaced the grid since we cached it.
+    if (!/exceeds grid limits/i.test(err instanceof Error ? err.message : String(err))) throw err;
+    cachedGrid = null;
+    await ensureGridCapacity(rowNumber);
+    await write();
+  }
+}
+
+interface SheetGrid {
+  sheetId: number;
+  rowCount: number;
+  columnCount: number;
+}
+
+let cachedGrid: SheetGrid | null = null;
+
+async function readSheetGrid(): Promise<SheetGrid | null> {
+  const sheets = getSheetsClient();
+  const spreadsheetId = config.googleSheetId;
+  if (!sheets || !spreadsheetId) return null;
+  const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties' });
+  const props = (meta.data.sheets ?? []).find((s) => s.properties?.title === config.googleSheetTab)?.properties;
+  if (!props || props.sheetId == null) return null;
+  return {
+    sheetId: props.sheetId,
+    rowCount: props.gridProperties?.rowCount ?? 0,
+    columnCount: props.gridProperties?.columnCount ?? 0,
+  };
+}
+
+/** Ensure the tab has at least `requiredRows` rows, adding a buffer so we do
+ *  not call the metadata API on every single append. */
+async function ensureGridCapacity(requiredRows: number): Promise<void> {
+  const sheets = getSheetsClient();
+  const spreadsheetId = config.googleSheetId;
+  if (!sheets || !spreadsheetId) throw new Error('Sheets not configured');
+  if (!cachedGrid) {
+    cachedGrid = await readSheetGrid();
+    if (!cachedGrid) throw new Error('Sheet tab not found');
+  }
+  if (requiredRows <= cachedGrid.rowCount) return;
+  const growBy = Math.max(requiredRows - cachedGrid.rowCount, 100);
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [{ appendDimension: { sheetId: cachedGrid.sheetId, dimension: 'ROWS', length: growBy } }],
+    },
+  });
+  cachedGrid = { ...cachedGrid, rowCount: cachedGrid.rowCount + growBy };
+  logger.info({ rows: cachedGrid.rowCount, added: growBy }, 'Google Sheets grid expanded');
 }
 
 /** Sort key for a sheet data row: column A holds DD/MM/YYYY (display format). */
@@ -294,6 +359,7 @@ async function writeDataRows(rows: unknown[][]): Promise<void> {
   const sheets = getSheetsClient();
   const sheetId = config.googleSheetId;
   if (!sheets || !sheetId) return;
+  await ensureGridCapacity(rows.length + 1);
   await sheets.spreadsheets.values.update({
     spreadsheetId: sheetId,
     range: `${config.googleSheetTab}!A2:${GRID_LAST_COL}${rows.length + 1}`,
