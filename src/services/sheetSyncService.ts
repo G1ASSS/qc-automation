@@ -82,10 +82,31 @@ export function enqueueSheetSync(id: string): void {
   void syncOneRecordToSheets(id).catch((err) => logger.error({ err, qcId: id }, 'Sheet sync enqueue failed'));
 }
 
+/** Requeue rows that exhausted retries only because the sheet grid was too
+ *  small. Appends now grow the grid automatically, so those rows are safe to
+ *  retry and would otherwise stay FAILED forever. */
+async function requeueGridLimitFailures(): Promise<void> {
+  try {
+    const result = await prisma.qcInspection.updateMany({
+      where: {
+        sheetSyncStatus: 'FAILED',
+        sheetSyncError: { contains: 'exceeds grid limits', mode: 'insensitive' },
+      },
+      data: { sheetSyncStatus: 'PENDING', retryCount: 0, sheetSyncError: null },
+    });
+    if (result.count > 0) {
+      logger.info({ count: result.count }, 'Requeued sheet rows that failed on grid limits');
+    }
+  } catch (err) {
+    logger.warn({ err }, 'Failed to requeue grid-limit sheet failures');
+  }
+}
+
 /** Background retry loop: picks up PENDING/FAILED rows (e.g. after restarts) and syncs them. */
 export function startSheetRetryWorker(intervalMs = 60_000): NodeJS.Timeout {
   async function tick(): Promise<void> {
     try {
+      await requeueGridLimitFailures();
       const pending = await prisma.qcInspection.findMany({
         where: { sheetSyncStatus: { in: ['PENDING', 'FAILED'] } },
         orderBy: { createdAt: 'asc' },
