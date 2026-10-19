@@ -118,11 +118,13 @@ Machine No:    23
     }
   });
 
-  it('9. fails gracefully when Machine No and Number are missing', () => {
+  it('9. parses reports where Machine No and Number are missing (machine is optional)', () => {
     const r = parseQCMessage(`IPQC Random Inspection 15/09/2026\nFactory 2 Row hole\nJob Number: TD-HM-014\nQC check Ok.`);
-    // Machine No missing AND Number missing → not enough identity → failure mentioning machine
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.errors.join(' ').toLowerCase()).toContain('machine');
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.jobNumber).toBe('TD-HM-014');
+    expect(r.data.machineNumber).toBe(null);
+    expect(r.data.number).toBe(null);
   });
 
   it('10. fails gracefully when Job Number is missing', () => {
@@ -450,6 +452,61 @@ Total NG=400pcs`;
     expect(r.data.machineNumber).toBe('4');
     expect(r.data.modelNumber).toBe('1220*2440*12mm');
     expect(r.data.colour).toBe('SW');
+    expect(r.data.inspectionQty).toBe(10);
+    expect(r.data.qcResult).toBe('OK');
+  });
+
+  it('40. parses compact Cleaning template: Number becomes job, Wood number becomes machine', () => {
+    const msg = 'IPQC Random check19/10/2026 Factory 2 Cleaning Number:TG-05 Wood number:10 Time:18:50 Machine number: Random check: Cleaning 📍QC check 100% :10 Pcs QC Check OK.';
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-10-19');
+    expect(r.data.factory).toBe('Factory 2');
+    expect(r.data.process).toBe('Cleaning');
+    expect(r.data.jobNumber).toBe('TG-05');
+    expect(r.data.number).toBe(null);
+    expect(r.data.machineNumber).toBe('10');
+    expect(r.data.inspectionTime).toBe('18:50');
+    expect(r.data.qcResult).toBe('OK');
+    expect(r.data.qcCheck).toContain('100%');
+  });
+
+  it('41. parses compact Cleaning template without a machine label', () => {
+    const msg = 'IPQC Random check19/10/2026 Factory 2 Cleaning Number:TG-05 Wood number:10 Time:18:50 Random check: Cleaning 📍QC check 100% 10 Pcs QC Check OK.';
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.jobNumber).toBe('TG-05');
+    expect(r.data.machineNumber).toBe('10');
+    expect(r.data.process).toBe('Cleaning');
+    expect(r.data.qcResult).toBe('OK');
+  });
+
+  it('42. parses compact Packing template without machine number', () => {
+    const msg = 'IPQC Random Inspection 19/10/2026 Factory2 Packing Random check time:18:25 Job Number:JV12139WH Check 100%= 5pcs Check the equipment bag before packing. Check 100% ok';
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionType).toBe('IPQC Random Inspection');
+    expect(r.data.process).toBe('Packing');
+    expect(r.data.jobNumber).toBe('JV12139WH');
+    expect(r.data.machineNumber).toBe(null);
+    expect(r.data.inspectionTime).toBe('18:25');
+    expect(r.data.qcCheck).toBe('100% = 5pcs');
+    expect(r.data.qcResult).toBe('OK');
+  });
+
+  it('43. parses task-style woodworking report with inferred type and OK/NG counts', () => {
+    const msg = '19/10/2026 Factory 2 Additional woodworking ⏰ Time: 17:59 🟢 Random inspection task Job Number:JZ10295WH ✅Total number of random checks: 10Boxes 🟢 (OK): 10Boxes 🔴 (NG):- 🟡 (TBD):- ## No.1refilled.';
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-10-19');
+    expect(r.data.inspectionType).toBe('IPQC Random Inspection');
+    expect(r.data.process).toBe('Additional woodworking');
+    expect(r.data.jobNumber).toBe('JZ10295WH');
+    expect(r.data.inspectionTime).toBe('17:59');
     expect(r.data.inspectionQty).toBe(10);
     expect(r.data.qcResult).toBe('OK');
   });

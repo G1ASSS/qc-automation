@@ -2,6 +2,9 @@ import { prisma } from '../database/prisma.js';
 import { logger } from '../config/logger.js';
 import { config } from '../config/env.js';
 import { appendSheetRow, tidySheet } from '../integrations/google-sheets/sheetsClient.js';
+import { parseQCMessage } from '../parsers/qcParser.js';
+import { ParsedQCDataSchema } from '../validators/qcValidator.js';
+import { createQcInspection } from './qcService.js';
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -120,10 +123,71 @@ async function requeueRecoverableSyncFailures(): Promise<void> {
   }
 }
 
+/** How many times a rejected message is re-parsed before we give up on it. */
+const FAILED_MESSAGE_MAX_ATTEMPTS = 5;
+
+/**
+ * Re-parse previously rejected messages with the current parser. Reports that
+ * now parse (e.g. after a new template was supported) are stored and synced.
+ * If a record with the same date/factory/process/time already exists the
+ * message is treated as a re-send: it is marked resolved, never duplicated.
+ */
+async function recoverFailedMessages(): Promise<void> {
+  try {
+    const failed = await prisma.failedMessage.findMany({
+      where: { resolved: false, retryCount: { lt: FAILED_MESSAGE_MAX_ATTEMPTS } },
+      orderBy: { createdAt: 'asc' },
+      take: 10,
+    });
+    if (failed.length === 0) return;
+
+    let recovered = 0;
+    for (const fm of failed) {
+      const parsed = parseQCMessage(fm.originalMessage);
+      const zod = parsed.success && parsed.data ? ParsedQCDataSchema.safeParse(parsed.data) : null;
+      if (!zod || !zod.success || fm.telegramMessageId == null) {
+        await prisma.failedMessage.update({ where: { id: fm.id }, data: { retryCount: { increment: 1 } } });
+        continue;
+      }
+
+      const looksLikeResend = await prisma.qcInspection.findFirst({
+        where: {
+          inspectionDate: new Date(`${zod.data.inspectionDate}T00:00:00.000Z`),
+          factory: zod.data.factory,
+          process: zod.data.process,
+          inspectionTime: zod.data.inspectionTime,
+        },
+        select: { id: true },
+      });
+
+      if (!looksLikeResend) {
+        const { record, duplicate } = await createQcInspection({
+          ...zod.data,
+          originalMessage: fm.originalMessage,
+          telegramMessageId: fm.telegramMessageId,
+          telegramChatId: Number(fm.telegramChatId ?? 0),
+          telegramUserId: fm.telegramUserId != null ? Number(fm.telegramUserId) : undefined,
+          telegramUsername: fm.telegramUsername ?? undefined,
+          receivedAt: fm.receivedAt,
+        });
+        if (!duplicate) {
+          enqueueSheetSync((record as { id: string }).id);
+          recovered += 1;
+        }
+      }
+      await prisma.failedMessage.update({ where: { id: fm.id }, data: { resolved: true, retryCount: { increment: 1 } } });
+    }
+    if (recovered > 0) logger.info({ recovered }, 'Recovered previously rejected QC messages');
+  } catch (err) {
+    logger.warn({ err }, 'Failed-message recovery run failed');
+  }
+}
+
 /** Background retry loop: picks up PENDING/FAILED rows (e.g. after restarts) and syncs them. */
 export function startSheetRetryWorker(intervalMs = 60_000): NodeJS.Timeout {
   async function tick(): Promise<void> {
     try {
+      await recoverFailedMessages();
       await requeueRecoverableSyncFailures();
       const pending = await prisma.qcInspection.findMany({
         where: { sheetSyncStatus: { in: ['PENDING', 'FAILED'] } },

@@ -189,6 +189,10 @@ export function parseQCMessage(message: string): ParseResult {
       inspectionType = t || null;
     }
   }
+  // Task-style templates carry no "<type> <date>" line; infer from the QC signal.
+  if (!inspectionType && /random\s*(?:inspection|check|task)/i.test(fullText)) {
+    inspectionType = 'IPQC Random Inspection';
+  }
 
   // ---------- Factory + process ----------
   let processSuffixMachine: string | null = null;
@@ -199,6 +203,14 @@ export function parseQCMessage(message: string): ParseResult {
     if (m) {
       factory = `Factory ${m[1]}`;
       let rest = normalizeSpaces(stripTrailingPeriod(m[2] ?? '')).replace(/^[:=\-.,\s]+/, '');
+      // Compact one-line templates pack later fields onto the same line:
+      // "Factory 2 Cleaning Number:TG-05 Wood number:10 Time:18:50 ..." → process "Cleaning".
+      if (rest) {
+        const stop = /\s+(?=(?:job|number|machine|wood|time|qc|check|random|shift|model|colou?r|total|status|remarks?|defects?|problems?|found|note)\b)/i.exec(rest);
+        if (stop && stop.index > 0) {
+          rest = normalizeSpaces(rest.slice(0, stop.index)).replace(/[^\p{L}\p{N})]+$/u, '');
+        }
+      }
       const pm = /\/\s*([A-Za-z0-9]+)\s*$/.exec(rest);
       if (pm) {
         rest = normalizeSpaces(stripTrailingPeriod(rest.slice(0, pm.index))).replace(/[:=\-.,\s]+$/, '');
@@ -255,6 +267,25 @@ export function parseQCMessage(message: string): ParseResult {
     }
   }
 
+  // Variant: bare "Number: TG-05" with no Job label — an alphanumeric
+  // identifier (has letters) is the job key, not a quantity. Works both on
+  // its own line and inside compact one-line templates.
+  let jobFromBareNumber = false;
+  if (!jobNumber) {
+    for (const line of merged) {
+      const re = /\bnumber\b\s*[:=\-]\s*([A-Za-z][A-Za-z0-9\-_\/\.]*)/gi;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(line)) !== null) {
+        const before = line.slice(0, m.index).trimEnd();
+        if (/(?:machine|wood|job|model|serial|part)$/i.test(before)) continue;
+        jobNumber = stripTrailingPeriod(m[1].trim()).replace(/[),;]+$/, '');
+        jobFromBareNumber = true;
+        break;
+      }
+      if (jobNumber) break;
+    }
+  }
+
   if (!jobNumber) {
     for (const line of merged) {
       if (/job\s*(?:number|no\.?|#)?\s*[:=\-]\s*(?:[-\u2014]|n\/?a|nil|none)\s*$/i.test(line)) {
@@ -282,6 +313,16 @@ export function parseQCMessage(message: string): ParseResult {
       if (val.length > 30) continue; // probably a sentence, not an identifier
       machineNumber = val;
       break;
+    }
+  }
+  // Variant: "Wood number: 10" is the machine in the compact check template.
+  if (machineNumber == null) {
+    for (const line of merged) {
+      const m = /wood\s*(?:number|no\.?)?\s*[:=\-]\s*([A-Za-z0-9][A-Za-z0-9\-_\/]*)/i.exec(line);
+      if (m) {
+        machineNumber = stripTrailingPeriod(m[1].trim()).slice(0, 50);
+        break;
+      }
     }
   }
   if (machineNumber == null) machineNumber = processSuffixMachine;
@@ -314,7 +355,8 @@ export function parseQCMessage(message: string): ParseResult {
       const nm = /^number\s*[:=\-.]?\s*([^\s:;]+)/i.exec(line);
       if (nm) {
         const val = stripTrailingPeriod(nm[1].trim());
-        if (val && !/^[-\u2014\s]*$/.test(val)) { number = val; }
+        const usedAsJob = jobFromBareNumber && val === jobNumber;
+        if (val && !usedAsJob && !/^[-\u2014\s]*$/.test(val)) { number = val; }
       }
     }
     if (number != null) break;
@@ -370,12 +412,12 @@ export function parseQCMessage(message: string): ParseResult {
       if (m && /\bshift\b/i.test(line)) shift = m[1].trim();
     }
     if (inspectionQty == null) {
-      // Skip date lines so the day of "Inspection 15/09/2026" is never read as a quantity
-      if (!findDate(line)) {
-        let m = /(?:qc\s+)?random\s*(?:inspection|check|number|all)?\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?|box)?/i.exec(line);
-        if (!m) m = /total\s*(?:number\s+of\s+)?random\s*(?:checks?|inspections?)?\s*[:=\-]?\s*(\d+)/i.exec(line);
-        if (m) inspectionQty = Number(m[1]);
-      }
+      // Strip date tokens so the day of "Inspection 15/09/2026" is never read
+      // as a quantity, while one-line templates stay parseable.
+      const qtyLine = findDate(line) ? normalizeSpaces(line.replace(DATE_TOKEN_RE, ' ')) : line;
+      let m = /(?:qc\s+)?random\s*(?:inspection|check|number|all)?\s*[:=\-]?\s*(\d+)\s*(?:pcs?|pc\.?|box)?/i.exec(qtyLine);
+      if (!m) m = /total\s*(?:number\s+of\s+)?random\s*(?:checks?|inspections?)?\s*[:=\-]?\s*(\d+)/i.exec(qtyLine);
+      if (m) inspectionQty = Number(m[1]);
     }
     if (foundQty == null) {
       let m = /number\s*of\s*\w*\s*found\s*[:=\-]?\s*(\d+)/i.exec(line);
@@ -404,6 +446,18 @@ export function parseQCMessage(message: string): ParseResult {
     if (!rm) rm = /\bcheck\s*[:=\-]?\s*(ok|ng|pass|fail|good|bad)\s*\.?$/i.exec(line);
     if (rm) {
       if (!qcResult) qcResult = normalizeLabel(rm[1]);
+      // The same physical line may also carry the check detail before the
+      // result: "QC check 100% :10 Pcs QC Check OK."
+      if (!qcCheck && isQcCheck && rm.index > 0) {
+        const fm = /qc\s*[-:]?\s*check\s*[:=\-]?\s*(.+)$/i.exec(line.slice(0, rm.index));
+        if (fm) {
+          const val = normalizeSpaces(fm[1].trim())
+            .replace(/^[:=\-.,\s]+/, '')
+            .replace(/\s*:\s*/g, ': ')
+            .trim();
+          if (val && /[\d%]/.test(val)) qcCheck = val;
+        }
+      }
       continue;
     }
     // Detail-style: "QC check 100%=1pc." — remainder is the check value.
@@ -418,6 +472,12 @@ export function parseQCMessage(message: string): ParseResult {
         qcCheck = val;
       }
     }
+  }
+
+  // Compact one-line templates: "Check 100%= 5pcs" with no "QC check" label.
+  if (!qcCheck) {
+    const m = /check\s*100\s*%\s*=?\s*(\d+\s*(?:pcs?|pc\.?|boxes?|nos?\.?)?)/i.exec(fullText);
+    if (m) qcCheck = `100% = ${normalizeSpaces(m[1])}`;
   }
 
   // Fallback result patterns: "QC Result: OK", "Result: NG", standalone "OK"/"NG" line.
@@ -453,6 +513,14 @@ export function parseQCMessage(message: string): ParseResult {
     if (/total\s*ng|revealed problems|problems?\s+(encountered|found)|defects?\s+(found|detected)/i.test(fullText)) {
       qcResult = 'NG';
     }
+  }
+  // Compact template: "... Check 100% ok" with no QC-check result line.
+  if (!qcResult && /check\b[^.\n]*\bok\b/i.test(fullText)) qcResult = 'OK';
+  // Task-template summary: "(OK): 10Boxes (NG):-" without an explicit result.
+  if (!qcResult) {
+    const okm = /\(\s*ok\s*\)\s*[:=\-]\s*(\d+)/i.exec(fullText);
+    const ngm = /\(\s*ng\s*\)\s*[:=\-]\s*(\d+)/i.exec(fullText);
+    if (okm || ngm) qcResult = ngm && Number(ngm[1]) > 0 ? 'NG' : 'OK';
   }
 
   // NG-format check summary when there is no "QC check ..." line:
@@ -541,7 +609,6 @@ export function parseQCMessage(message: string): ParseResult {
   if (!inspectionDate) missing.push('Date is missing or invalid');
   if (!factory) missing.push('Factory is missing');
   if (!jobNumber) missing.push('Job Number is missing');
-  if (machineNumber == null && number == null) missing.push('Machine No is missing');
   if (!hasQcSignal) missing.push('QC information is missing');
 
   if (missing.length > 0 || !inspectionDate || !factory || !jobNumber) {
