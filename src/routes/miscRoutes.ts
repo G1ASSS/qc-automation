@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { healthHandler, readyHandler } from '../controllers/healthController.js';
 import { deleteWebhookHandler, setWebhookHandler } from '../controllers/adminController.js';
 import { getDashboardStats } from '../services/commandService.js';
+import { reparseQcRecord } from '../services/sheetSyncService.js';
 import { prisma } from '../database/prisma.js';
 import { serializeQcRow } from '../services/qcService.js';
 import { requireAdminToken } from '../middleware/security.js';
@@ -47,6 +48,18 @@ miscRouter.get('/api/admin/pending-sync', async (_req, res, next) => {
       take: 100,
     });
     res.json({ ok: true, data: rows.map((r) => serializeQcRow(r as unknown as Record<string, unknown>)) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Re-parse a record from its original Telegram message (parser upgrades) and
+ *  repair the DB row plus its Google Sheets row. */
+miscRouter.post('/api/admin/qc/:id/reparse', async (req, res, next) => {
+  if (!requireAdminToken(req, res)) return;
+  try {
+    const result = await reparseQcRecord(String(req.params.id));
+    res.status(result.status).json(result);
   } catch (err) {
     next(err);
   }

@@ -222,6 +222,20 @@ export function parseQCMessage(message: string): ParseResult {
   }
   // Default plant: some task formats (e.g. woodworking) carry no Factory line.
   if (!factory) factory = 'Factory 2';
+  // Multi-line variant: the process sits on its own line right after the factory.
+  if (factory && !process) {
+    const fi = merged.findIndex((l) => /factory\s*[:#\-]?\s*\d+/i.test(l));
+    const nextLine = fi >= 0 ? merged[fi + 1] : undefined;
+    if (
+      nextLine &&
+      nextLine.length <= 40 &&
+      !/[:=]/.test(nextLine) &&
+      !findDate(nextLine) &&
+      !/^(?:job|machine|number|time|qc|check|random|shift|model|colou?r|total|status|remarks?|defects?|problems?|date|inspection|ok|ng|finished|unfinished|pass|fail|pending|recheck|repair|hold)\b/i.test(nextLine)
+    ) {
+      process = normalizeSpaces(nextLine);
+    }
+  }
 
   // ---------- Job number ----------
   let jobNumber: string | null = null;
@@ -517,9 +531,10 @@ export function parseQCMessage(message: string): ParseResult {
   // Compact template: "... Check 100% ok" with no QC-check result line.
   if (!qcResult && /check\b[^.\n]*\bok\b/i.test(fullText)) qcResult = 'OK';
   // Task-template summary: "(OK): 10Boxes (NG):-" without an explicit result.
+  // Tolerates a stripped opening paren when the counter is on its own line.
   if (!qcResult) {
-    const okm = /\(\s*ok\s*\)\s*[:=\-]\s*(\d+)/i.exec(fullText);
-    const ngm = /\(\s*ng\s*\)\s*[:=\-]\s*(\d+)/i.exec(fullText);
+    const okm = /\b(?:ok|ng)\b\s*\)?\s*[:=\-]\s*(\d+)/i.exec(fullText);
+    const ngm = /\bng\b\s*\)?\s*[:=\-]\s*(\d+)/i.exec(fullText);
     if (okm || ngm) qcResult = ngm && Number(ngm[1]) > 0 ? 'NG' : 'OK';
   }
 
@@ -546,10 +561,12 @@ export function parseQCMessage(message: string): ParseResult {
       }
       continue;
     }
+    // Task-template counters: "(OK): 10Boxes", "(NG):-", "(TBD):-" are tallies, not remarks.
+    if (/^\(?\s*(?:ok|ng|tbd)\s*\)?\s*[:=\-]/i.test(line)) continue;
     let m = /^(?:(?:defects?|remarks?|problems?|issues?|reasons?)(?:\s+(?:encountered|found|details?|description))?|(?:found\s+)?(?:defects?|remarks?|problems?|issues?|reasons?)|ng\s*(?:reason|problem|remark|defect)?)\s*[:=\-.,]*\s*(.+)/i.exec(line);
     if (m) {
       const val = stripTrailingPeriod(normalizeSpaces(m[1].trim()));
-      if (val && !defectRemark) {
+      if (val && !defectRemark && !/^[):=\-.,\s]*$/.test(val)) {
         defectRemark = val;
         if (!qcResult && /^ng\b/i.test(line)) qcResult = 'NG';
         continue;
@@ -558,8 +575,10 @@ export function parseQCMessage(message: string): ParseResult {
     m = /^ng\s+([^\s].*)/i.exec(line);
     if (m) {
       const val = stripTrailingPeriod(normalizeSpaces(m[1].replace(/^[:=\-.,]+\s*/, '').trim()));
-      if (val && !defectRemark) defectRemark = val;
-      if (!qcResult) qcResult = 'NG';
+      if (val && !/^[):=\-.,\s]*$/.test(val)) {
+        if (!defectRemark) defectRemark = val;
+        if (!qcResult) qcResult = 'NG';
+      }
       continue;
     }
   }

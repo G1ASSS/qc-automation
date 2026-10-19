@@ -510,4 +510,18 @@ Total NG=400pcs`;
     expect(r.data.inspectionQty).toBe(10);
     expect(r.data.qcResult).toBe('OK');
   });
+
+  it('44. ignores (OK)/(NG)/(TBD) task counters in multi-line woodworking reports', () => {
+    const msg = '19/10/2026\nFactory 2\nAdditional woodworking \n⏰ Time: 17:59\n🟢 Random inspection task\nJob Number:JZ10295WH\n✅Total number of random checks: 10Boxes\n🟢 (OK): 10Boxes\n🔴 (NG):-\n🟡 (TBD):-\n## No.1refilled.';
+    const r = parseQCMessage(msg);
+    expect(r.success).toBe(true);
+    if (!r.success) throw new Error(JSON.stringify(r.errors));
+    expect(r.data.inspectionDate).toBe('2026-10-19');
+    expect(r.data.inspectionType).toBe('IPQC Random Inspection');
+    expect(r.data.process).toBe('Additional woodworking');
+    expect(r.data.jobNumber).toBe('JZ10295WH');
+    expect(r.data.inspectionQty).toBe(10);
+    expect(r.data.qcResult).toBe('OK');
+    expect(r.data.defectRemark).toBe(null);
+  });
 });

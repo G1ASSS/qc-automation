@@ -1,7 +1,7 @@
 import { prisma } from '../database/prisma.js';
 import { logger } from '../config/logger.js';
 import { config } from '../config/env.js';
-import { appendSheetRow, tidySheet } from '../integrations/google-sheets/sheetsClient.js';
+import { appendSheetRow, dbRowSheetKey, removeSheetRowsByKeys, tidySheet } from '../integrations/google-sheets/sheetsClient.js';
 import { parseQCMessage } from '../parsers/qcParser.js';
 import { ParsedQCDataSchema } from '../validators/qcValidator.js';
 import { createQcInspection } from './qcService.js';
@@ -30,6 +30,14 @@ export async function syncOneRecordToSheets(id: string): Promise<SheetSyncOutcom
   const rec = await prisma.qcInspection.findUnique({ where: { id } });
   if (!rec) return 'failed';
   if (rec.sheetSyncStatus === 'SYNCED') return 'synced';
+
+  // Atomically claim the row before appending. Without this, two callers
+  // (webhook fire-and-forget + worker tick) could both append the same row.
+  const claim = await prisma.qcInspection.updateMany({
+    where: { id, sheetSyncStatus: { in: ['PENDING', 'FAILED'] } },
+    data: { sheetSyncStatus: 'SYNCING' },
+  });
+  if (claim.count === 0) return 'synced';
 
   const maxRetries = config.sheetsMaxRetries;
   let attempt = rec.retryCount;
@@ -82,14 +90,13 @@ export async function syncOneRecordToSheets(id: string): Promise<SheetSyncOutcom
         });
         return 'failed';
       }
+      // Stay claimed (SYNCING) while backing off so no other caller can
+      // append the same row in the meantime.
       await prisma.qcInspection.update({
         where: { id },
-        data: { sheetSyncStatus: 'PENDING', sheetSyncError: msg.slice(0, 2000), retryCount: attempt },
+        data: { sheetSyncError: msg.slice(0, 2000), retryCount: attempt },
       });
       await delay(backoffMs(attempt));
-      // Re-read: stop if another worker already synced it.
-      const fresh = await prisma.qcInspection.findUnique({ where: { id } });
-      if (!fresh || fresh.sheetSyncStatus === 'SYNCED') return 'synced';
     }
   }
 }
@@ -120,6 +127,115 @@ async function requeueRecoverableSyncFailures(): Promise<void> {
     }
   } catch (err) {
     logger.warn({ err }, 'Failed to requeue recoverable sheet sync failures');
+  }
+}
+
+export interface ReparseResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+  details?: unknown;
+  sheetRowNumber?: number;
+}
+
+/**
+ * Re-parse a stored record from its original message and repair DB + sheet.
+ * Used after parser improvements to fix rows that were stored with bad values.
+ */
+export async function reparseQcRecord(id: string): Promise<ReparseResult> {
+  const rec = await prisma.qcInspection.findUnique({ where: { id } });
+  if (!rec) return { ok: false, status: 404, error: 'not_found' };
+
+  const parsed = parseQCMessage(rec.originalMessage);
+  const zod = parsed.success && parsed.data ? ParsedQCDataSchema.safeParse(parsed.data) : null;
+  if (!zod || !zod.success) {
+    return {
+      ok: false,
+      status: 422,
+      error: 'unparseable',
+      details: parsed.success ? zod?.error?.issues : parsed.errors,
+    };
+  }
+
+  const updated = await prisma.qcInspection.update({
+    where: { id },
+    data: {
+      inspectionDate: new Date(`${zod.data.inspectionDate}T00:00:00.000Z`),
+      inspectionType: zod.data.inspectionType,
+      factory: zod.data.factory,
+      process: zod.data.process,
+      jobNumber: zod.data.jobNumber,
+      number: zod.data.number,
+      machineNumber: zod.data.machineNumber,
+      modelNumber: zod.data.modelNumber,
+      colour: zod.data.colour,
+      inspectionTime: zod.data.inspectionTime,
+      qcCheck: zod.data.qcCheck,
+      qcResult: zod.data.qcResult,
+      defectRemark: zod.data.defectRemark,
+      shift: zod.data.shift,
+      inspectionQty: zod.data.inspectionQty,
+      foundQty: zod.data.foundQty,
+      totalNg: zod.data.totalNg,
+      status: zod.data.status,
+      originalStatus: zod.data.originalStatus,
+    },
+  });
+
+  // Replace the sheet row so it matches the corrected record.
+  if (rec.sheetSyncStatus === 'SYNCED' || rec.sheetRowNumber != null) {
+    try {
+      await removeSheetRowsByKeys([dbRowSheetKey(rec)]);
+      const rowNumber = await appendSheetRow({
+        inspectionDate: updated.inspectionDate.toISOString().slice(0, 10),
+        inspectionType: updated.inspectionType,
+        factory: updated.factory,
+        process: updated.process,
+        jobNumber: updated.jobNumber,
+        number: updated.number,
+        machineNumber: updated.machineNumber,
+        modelNumber: updated.modelNumber,
+        colour: updated.colour,
+        inspectionTime: updated.inspectionTime,
+        qcCheck: updated.qcCheck,
+        qcResult: updated.qcResult,
+        defectRemark: updated.defectRemark,
+        shift: updated.shift,
+        inspectionQty: updated.inspectionQty,
+        foundQty: updated.foundQty,
+        totalNg: updated.totalNg,
+        status: updated.status,
+        telegramUsername: updated.telegramUsername,
+        receivedAt: updated.receivedAt,
+      });
+      await prisma.qcInspection.update({
+        where: { id },
+        data: { sheetSyncStatus: 'SYNCED', sheetRowNumber: rowNumber, sheetSyncedAt: new Date(), sheetSyncError: null },
+      });
+      return { ok: true, status: 200, sheetRowNumber: rowNumber ?? undefined };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn({ err, qcId: id }, 'Reparse: sheet update failed, queued for retry');
+      await prisma.qcInspection.update({
+        where: { id },
+        data: { sheetSyncStatus: 'PENDING', sheetSyncError: msg.slice(0, 2000), retryCount: 0 },
+      });
+      return { ok: true, status: 200, error: 'sheet_update_deferred' };
+    }
+  }
+  return { ok: true, status: 200 };
+}
+
+/** Rows left SYNCING by a crashed process would otherwise never be retried. */
+async function resetStaleSyncingRows(): Promise<void> {
+  try {
+    const res = await prisma.qcInspection.updateMany({
+      where: { sheetSyncStatus: 'SYNCING', updatedAt: { lt: new Date(Date.now() - 10 * 60 * 1000) } },
+      data: { sheetSyncStatus: 'PENDING' },
+    });
+    if (res.count > 0) logger.warn({ count: res.count }, 'Reset stale SYNCING sheet rows to PENDING');
+  } catch (err) {
+    logger.warn({ err }, 'Failed to reset stale SYNCING sheet rows');
   }
 }
 
@@ -187,6 +303,7 @@ async function recoverFailedMessages(): Promise<void> {
 export function startSheetRetryWorker(intervalMs = 60_000): NodeJS.Timeout {
   async function tick(): Promise<void> {
     try {
+      await resetStaleSyncingRows();
       await recoverFailedMessages();
       await requeueRecoverableSyncFailures();
       const pending = await prisma.qcInspection.findMany({
