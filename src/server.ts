@@ -9,10 +9,17 @@ async function main(): Promise<void> {
   const app = createApp();
   const port = config.port;
 
-  const db = await checkDatabase();
-  if (db !== 'connected') {
-    logger.warn('Starting without database connection — /ready will report 503 until DB is reachable');
-  }
+  // Check DB but do NOT block startup — Neon free tier can take several seconds
+  // to wake from suspension. The app still serves the dashboard while DB reconnects.
+  checkDatabase().then((db) => {
+    if (db !== 'connected') {
+      logger.warn('Starting without database connection — /ready will report 503 until DB is reachable');
+    } else {
+      logger.info('Database connected');
+    }
+  }).catch((err) => {
+    logger.error({ err }, 'Database startup check failed');
+  });
 
   // Resume pending Google-Sheets syncs after restarts (idempotent worker).
   try {
