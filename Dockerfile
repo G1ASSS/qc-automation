@@ -24,4 +24,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY scripts ./scripts
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Run migrations with a 30-second timeout so a suspended Neon DB never
+# hangs the container forever. If migrate fails, start the server anyway
+# (the app handles DB-down gracefully) so the health endpoint stays up.
+CMD ["sh", "-c", "timeout 30 npx prisma migrate deploy || echo 'Migration skipped (DB not ready)'; node dist/server.js"]
