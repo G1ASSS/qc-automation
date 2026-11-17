@@ -9,6 +9,7 @@ export function dashboardHtml(): string {
 <title>QC Pulse — Factory QC Command Center</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6642778376799873" crossorigin="anonymous"></script>
 <script>(function(s){s.dataset.zone='12286498',s.src='https://al5sm.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+<script>(function(s){s.dataset.zone='12286501',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){})}</script>
 <style>
 /* ── AdSense ad unit wrapper ── */
