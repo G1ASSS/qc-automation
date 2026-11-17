@@ -8,19 +8,8 @@ export function dashboardHtml(): string {
 <meta name="monetag" content="e2c179532b3905fe6e533fdb7c7e109d" />
 <title>QC Pulse — Factory QC Command Center</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6642778376799873" crossorigin="anonymous"></script>
-<script>
-/* Monetag interstitial (zone 12286393) */
-(function(){
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});
-  }
-  window.__mtg_zone=12286393;
-  var s=document.createElement('script');
-  s.async=true;
-  s.src='https://3nbf4.com/act/files/tag.min.js?z='+window.__mtg_zone;
-  document.head.appendChild(s);
-})();
-</script>
+<script>(function(s){s.dataset.zone='12286498',s.src='https://al5sm.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){})}</script>
 <style>
 /* ── AdSense ad unit wrapper ── */
 .ad-unit{width:100%;max-width:1280px;margin:0 auto 13px;text-align:center;overflow:hidden}
@@ -538,9 +527,9 @@ document.getElementById("btn-copy").onclick=function(){
   /* Show Monetag interstitial, then copy after ad closes/times-out */
   try{
     if(window.show_monetag){
-      window.show_monetag(12286393).then(doCopy).catch(doCopy);
+      window.show_monetag(12286498).then(doCopy).catch(doCopy);
     } else if(window.showidX){
-      window.showidX(12286393);
+      window.showidX(12286498);
       setTimeout(doCopy,500);
     } else {
       doCopy();
