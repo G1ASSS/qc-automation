@@ -6,7 +6,11 @@ export function dashboardHtml(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#070d1d" />
 <title>QC Pulse — Factory QC Command Center</title>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6642778376799873" crossorigin="anonymous"></script>
 <style>
+/* ── AdSense ad unit wrapper ── */
+.ad-unit{width:100%;max-width:1280px;margin:0 auto 13px;text-align:center;overflow:hidden}
+.ad-unit ins{display:block}
 :root{
   --bg:#070d1d; --bg2:#0b1428;
   --glass:rgba(148,178,255,.08); --glass2:rgba(148,178,255,.13);
@@ -321,6 +325,7 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <div class="hero-meta"><span class="chip"><svg width="14" height="14"><use href="#i-cal"/></svg><span id="hero-date">—</span></span><span class="chip"><svg width="14" height="14"><use href="#i-sync"/></svg><span id="hero-sync">Sheets: —</span></span><span class="chip"><svg width="14" height="14"><use href="#i-grid"/></svg><span id="hero-total">— records</span></span></div></div>
 <div class="hero-actions"><button class="gbtn primary" id="btn-refresh"><svg width="16" height="16"><use href="#i-sync"/></svg>Refresh</button><button class="gbtn" id="btn-export"><svg width="16" height="16"><use href="#i-dl"/></svg>Export .xlsx</button></div>
 </div></section>
+<div class="ad-unit" aria-label="Advertisement"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6642778376799873" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle=window.adsbygoogle||[]).push({})</script></div>
 <section class="grid2 reveal">
 <div class="panel"><h3>Inspection trend</h3><p class="desc">Volume per inspection day (from loaded records, animated)</p><div class="bars" id="bars"></div></div>
 <div class="panel"><h3>Quality split</h3><p class="desc">OK vs NG vs pending result</p><div class="donut-wrap"><svg id="donut" width="150" height="150" viewBox="0 0 42 42" role="img" aria-label="Quality split"></svg><div class="legend" id="legend"></div></div></div>
@@ -342,6 +347,7 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <div class="msgcap"><span>Factory message preview</span></div>
 <pre class="sum-pre report-pre" id="sum-text">Tap Generate — defaults to today (Bangkok).</pre>
 </section>
+<div class="ad-unit" aria-label="Advertisement"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6642778376799873" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle=window.adsbygoogle||[]).push({})</script></div>
 <section class="toolbar reveal console" id="sec-records"><div class="overline">Records console</div><div class="findrow">
 <label class="field find-main"><svg width="16" height="16"><use href="#i-search"/></svg><input id="f-job" placeholder="Job number — e.g. CT-141" aria-label="Job number" /></label>
 <label class="field"><svg width="16" height="16"><use href="#i-cal"/></svg><input id="f-date" type="date" aria-label="Date" /></label>
@@ -364,7 +370,7 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <div class="tscroll" id="tscroll"><table id="tbl"><thead><tr><th>Date</th><th>Job</th><th>Factory / Process</th><th>Machine</th><th>Model</th><th>Colour</th><th>QC</th><th>Result</th><th>Status</th><th>Remark</th><th>Qty insp/found/NG</th><th>Shift</th><th>Time</th><th>User</th><th>Sync</th></tr></thead><tbody id="rows"></tbody></table><div class="cards" id="mcards"></div><div class="skel" id="skel"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div><div class="empty" id="empty" style="display:none"><svg width="42" height="42"><use href="#i-inbox"/></svg><div style="font-weight:800;color:var(--ink)">No inspections match</div><div>Try clearing filters or picking another date.</div></div></div>
 <div class="pager"><button class="gbtn" id="prev">Prev</button><button class="gbtn" id="next">Next</button><span class="mono" id="pageinfo"></span><span style="flex:1"></span><button class="gbtn" id="btn-export2"><svg width="15" height="15"><use href="#i-dl"/></svg>Export filtered .xlsx</button></div>
 </section>
-<footer><span>QC Pulse · Telegram to Postgres to Sheets to Excel · <span id="foot-health">checking…</span></span><span class="mono" id="foot-time"></span></footer>
+<footer><div class="ad-unit" aria-label="Advertisement" style="margin-bottom:12px"><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6642778376799873" data-ad-slot="auto" data-ad-format="horizontal" data-full-width-responsive="true"></ins><script>(adsbygoogle=window.adsbygoogle||[]).push({})</script></div><span>QC Pulse · Telegram to Postgres to Sheets to Excel · <span id="foot-health">checking…</span></span><span class="mono" id="foot-time"></span></footer>
 </main>
 <div class="modal" id="modal" role="dialog" aria-modal="true"><div class="backdrop" id="mback"></div><div class="sheet"><div style="display:flex;gap:10px;align-items:center"><div class="logo" style="width:36px;height:36px"><svg width="18" height="18"><use href="#i-factory"/></svg></div><div><div id="m-title" style="font-weight:900">Inspection</div><div id="m-sub" style="font-size:12px;color:var(--muted)">—</div></div><div style="flex:1"></div><button class="iconbtn" id="mclose" aria-label="Close"><svg width="16" height="16"><use href="#i-x"/></svg></button></div><div id="m-body"></div></div></div>
 <nav class="dock" id="dock" aria-label="App sections">
