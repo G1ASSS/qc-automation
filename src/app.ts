@@ -19,7 +19,7 @@ export function createApp(): express.Express {
   app.use(express.json({ limit: '256kb' }));
 
   // Serve public/ folder at root so Monetag can reach /sw.js
-  const publicDir = path.resolve(__dirname, '../../public');
+  const publicDir = path.resolve(__dirname, '../public');
   app.use(express.static(publicDir));
   app.use(
     pinoHttp({

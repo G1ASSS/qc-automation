@@ -5,6 +5,7 @@ export function dashboardHtml(): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#070d1d" />
+<meta name="monetag" content="e2c179532b3905fe6e533fdb7c7e109d" />
 <title>QC Pulse — Factory QC Command Center</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6642778376799873" crossorigin="anonymous"></script>
 <script>
