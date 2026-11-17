@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
+import path from 'path';
 import { logger } from './config/logger.js';
 import { webhookRouter } from './routes/webhookRoutes.js';
 import { qcRouter } from './routes/qcRoutes.js';
@@ -16,6 +17,10 @@ export function createApp(): express.Express {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors());
   app.use(express.json({ limit: '256kb' }));
+
+  // Serve public/ folder at root so Monetag can reach /sw.js
+  const publicDir = path.resolve(__dirname, '../../public');
+  app.use(express.static(publicDir));
   app.use(
     pinoHttp({
       logger,

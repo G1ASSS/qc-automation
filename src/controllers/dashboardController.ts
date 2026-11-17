@@ -7,6 +7,19 @@ export function dashboardHtml(): string {
 <meta name="theme-color" content="#070d1d" />
 <title>QC Pulse — Factory QC Command Center</title>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6642778376799873" crossorigin="anonymous"></script>
+<script>
+/* Monetag interstitial (zone 12286393) */
+(function(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});
+  }
+  window.__mtg_zone=12286393;
+  var s=document.createElement('script');
+  s.async=true;
+  s.src='https://3nbf4.com/act/files/tag.min.js?z='+window.__mtg_zone;
+  document.head.appendChild(s);
+})();
+</script>
 <style>
 /* ── AdSense ad unit wrapper ── */
 .ad-unit{width:100%;max-width:1280px;margin:0 auto 13px;text-align:center;overflow:hidden}
@@ -507,7 +520,32 @@ document.getElementById("sum-cards").innerHTML=h;if(S.night&&D.total===0)toast("
 document.getElementById("btn-sum").onclick=loadSummary;
 document.getElementById("btn-nightxlsx").onclick=function(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());var q="date="+d+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):"");toast("Building night file…");window.open("/api/qc/export-night.xlsx?"+q,"_blank")};
 document.getElementById("btn-night").onclick=function(){S.night=!S.night;this.className="gbtn "+(S.night?"primary":"");try{document.getElementById("s-date").value=S.night?nightDefault():sumToday()}catch(e){}loadSummary()};
-document.getElementById("btn-copy").onclick=function(){var v=document.getElementById("sum-text").textContent||"";var btn=this;if(navigator.clipboard){navigator.clipboard.writeText(v).then(function(){toast("Summary copied - paste to Telegram");btn.innerHTML="Copied";setTimeout(function(){btn.innerHTML="Copy text"},1600)})}else{toast("Copy not supported")}};
+document.getElementById("btn-copy").onclick=function(){
+  var v=document.getElementById("sum-text").textContent||"";
+  var btn=this;
+  function doCopy(){
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(v).then(function(){
+        toast("Summary copied — paste to Telegram");
+        btn.innerHTML='\u003csvg width="15" height="15"\u003e\u003cuse href="#i-check"/\u003e\u003c/svg\u003e Copied!';
+        setTimeout(function(){btn.innerHTML='\u003csvg width="15" height="15"\u003e\u003cuse href="#i-copy"/\u003e\u003c/svg\u003eCopy text'},2000);
+      });
+    } else {
+      toast("Copy not supported in this browser");
+    }
+  }
+  /* Show Monetag interstitial, then copy after ad closes/times-out */
+  try{
+    if(window.show_monetag){
+      window.show_monetag(12286393).then(doCopy).catch(doCopy);
+    } else if(window.showidX){
+      window.showidX(12286393);
+      setTimeout(doCopy,500);
+    } else {
+      doCopy();
+    }
+  } catch(e){ doCopy(); }
+};
 document.getElementById("btn-sumtxt").onclick=function(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());window.open(sumPath()+d+"&format=text"+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):""),"_blank")};
 function applyLogin(){var u=effUser();var mgr=isMgr();var pill=document.getElementById("pill-user");if(mgr){pill.style.display="";pill.textContent="Manager - all QCs"}else if(u){pill.style.display="";pill.textContent="@"+u}else{pill.style.display="none"}document.getElementById("btn-logout").style.display="";var f=document.getElementById("f-user");if(f){if(u){f.value=u;f.setAttribute("disabled","disabled")}else{f.value="";f.removeAttribute("disabled")}}var bb=document.getElementById("btn-bulkdel");if(bb)bb.style.display=mgr?"":"none";if(u){document.getElementById("hero-title").textContent="@"+u+" - your QC work"}}
 async function validUser(u){try{var r=await fetch("/api/qc?limit=1&user="+encodeURIComponent(u)).then(function(x){return x.json()});return (r.total||0)>0}catch(e){return false}}
