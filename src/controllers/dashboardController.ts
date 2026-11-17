@@ -280,6 +280,27 @@ thead th{background:color-mix(in srgb,var(--card-solid) 88%,transparent);border-
 body[data-view="overview"] #sec-summary,body[data-view="overview"] #sec-records,body[data-view="overview"] #records-meta,body[data-view="overview"] section.tablewrap{display:none}
 body[data-view="summary"] #sec-overview,body[data-view="summary"] #kpis,body[data-view="summary"] section.grid2,body[data-view="summary"] #sec-records,body[data-view="summary"] #records-meta,body[data-view="summary"] section.tablewrap{display:none}
 body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[data-view="records"] section.grid2,body[data-view="records"] #sec-summary{display:none}
+/* ── Rewarded Ad Modal ── */
+.reward-veil{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fadein .3s}
+.reward-veil.open{display:flex}
+.reward-box{width:min(420px,92vw);text-align:center;border-radius:26px;padding:32px 28px;border:1px solid var(--line2);background:linear-gradient(180deg,rgba(30,45,85,.92),rgba(15,25,50,.95));box-shadow:0 32px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.3);animation:pop .35s var(--ease)}
+.reward-box .reward-icon{width:72px;height:72px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#2563eb,#7c3aed 60%,#06b6d4);box-shadow:0 8px 28px rgba(59,130,246,.5),inset 0 1px 0 rgba(255,255,255,.5);animation:float 3s ease-in-out infinite}
+.reward-box h2{margin:0 0 6px;font-size:22px;color:#fff;letter-spacing:-.02em}
+.reward-box p{margin:0 0 20px;font-size:14px;color:var(--muted);line-height:1.6}
+.reward-ring{position:relative;width:100px;height:100px;margin:0 auto 18px}
+.reward-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.reward-ring circle{fill:none;stroke-width:4;stroke-linecap:round}
+.reward-ring .ring-bg{stroke:rgba(148,178,255,.15)}
+.reward-ring .ring-fg{stroke:url(#reward-grad);transition:stroke-dashoffset .95s linear}
+.reward-ring .ring-num{position:absolute;inset:0;display:grid;place-items:center;font-size:32px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}
+.reward-ad{margin:16px 0;min-height:120px;border-radius:16px;border:1px solid var(--line);background:rgba(2,6,18,.4);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.reward-ad ins{display:block}
+.reward-btn{width:100%;padding:16px;border-radius:16px;font-size:15px;font-weight:900;border:0;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed 60%,#0891b2);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 10px 26px rgba(59,130,246,.5);opacity:.4;pointer-events:none;transition:opacity .3s,transform .15s var(--snap)}
+.reward-btn.ready{opacity:1;pointer-events:auto;animation:pop .3s var(--ease)}
+.reward-btn.ready:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 16px 36px rgba(124,58,237,.55)}
+.reward-btn.ready:active{transform:scale(.95)}
+.reward-skip{margin-top:10px;font-size:11px;color:var(--faint);background:none;border:0;cursor:default;pointer-events:none;opacity:0;transition:opacity .3s}
+.reward-skip.show{opacity:1;cursor:pointer;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -386,6 +407,19 @@ body[data-view="records"] #sec-overview,body[data-view="records"] #kpis,body[dat
 <button id="dock-export"><svg width="20" height="20"><use href="#i-dl"/></svg>Export</button>
 </nav>
 <div class="toast" id="toast"></div>
+<div class="reward-veil" id="reward-veil">
+<div class="reward-box">
+<div class="reward-icon"><svg width="32" height="32" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="13"/><polygon points="13,11 21,16 13,21" fill="#fff" stroke="none"/></svg></div>
+<h2 id="reward-title">Watch a short ad</h2>
+<p id="reward-desc">Please wait while the ad plays. Your content will be ready after the timer.</p>
+<div class="reward-ring">
+<svg viewBox="0 0 44 44"><defs><linearGradient id="reward-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><circle class="ring-bg" cx="22" cy="22" r="19"/><circle class="ring-fg" id="reward-arc" cx="22" cy="22" r="19" stroke-dasharray="119.38" stroke-dashoffset="119.38"/></svg>
+<div class="ring-num" id="reward-num">15</div>
+</div>
+<div class="reward-ad" id="reward-ad-slot"><ins class="adsbygoogle" style="display:block;min-height:100px" data-ad-client="ca-pub-6642778376799873" data-ad-slot="auto" data-ad-format="fluid"></ins></div>
+<button class="reward-btn" id="reward-done">⏳ Please wait…</button>
+</div>
+</div>
 <script>
 var S={page:0,limit:50,total:0,rows:[],all:[],view:"auto",night:false};
 function $(id){return document.getElementById(id)}
@@ -393,6 +427,41 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 function fmtDate(iso){try{return String(iso).slice(0,10).split("-").reverse().join("/")}catch(e){return iso}}
 function fmtDT(iso){try{var d=new Date(iso);var p=function(n){return String(n).padStart(2,"0")};return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear()+", "+p(d.getHours())+":"+p(d.getMinutes())}catch(e){return iso}}
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove("show")},2600)}
+/* ── Rewarded Ad System ── */
+function showRewardedAd(seconds, onComplete){
+  var veil=$("reward-veil");
+  var arc=$("reward-arc");
+  var num=$("reward-num");
+  var doneBtn=$("reward-done");
+  var circ=2*Math.PI*19; /* ~119.38 */
+  var left=seconds;
+  veil.classList.add("open");
+  num.textContent=left;
+  arc.style.strokeDashoffset=circ;
+  doneBtn.className="reward-btn";
+  doneBtn.textContent="\\u23f3 Please wait… "+left+"s";
+  doneBtn.onclick=null;
+  /* trigger Monetag popunder in background */
+  try{if(window.showidX)window.showidX(12286498)}catch(e){}
+  /* try pushing an AdSense ad into the slot */
+  try{(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch(e){}
+  var iv=setInterval(function(){
+    left--;
+    if(left<0)left=0;
+    num.textContent=left;
+    var progress=(seconds-left)/seconds;
+    arc.style.strokeDashoffset=circ*(1-progress);
+    doneBtn.textContent=left>0?"\\u23f3 Please wait… "+left+"s":"\\u2705 Continue";
+    if(left<=0){
+      clearInterval(iv);
+      doneBtn.className="reward-btn ready";
+      doneBtn.onclick=function(){
+        veil.classList.remove("open");
+        if(onComplete)onComplete();
+      };
+    }
+  },1000);
+}
 function bkkNow(){try{return new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Bangkok",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date())}catch(e){return new Date().toLocaleString()}}
 setInterval(function(){$("pill-clock").textContent=bkkNow()+" (BKK)";$("foot-time").textContent=bkkNow()},1000);
 (function theme(){var k="qc-theme";try{var v=localStorage.getItem(k);if(v)document.documentElement.setAttribute("data-theme",v)}catch(e){}syncIc();$("btn-theme").onclick=function(){var c=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",c);try{localStorage.setItem(k,c)}catch(e){}syncIc()};function syncIc(){var d=document.documentElement.getAttribute("data-theme")==="dark";$("theme-ic").setAttribute("href",d?"#i-sun":"#i-moon")}})();
@@ -516,7 +585,7 @@ document.getElementById("btn-night").onclick=function(){S.night=!S.night;this.cl
 document.getElementById("btn-copy").onclick=function(){
   var v=document.getElementById("sum-text").textContent||"";
   var btn=this;
-  function doCopy(){
+  showRewardedAd(15, function(){
     if(navigator.clipboard){
       navigator.clipboard.writeText(v).then(function(){
         toast("Summary copied — paste to Telegram");
@@ -524,20 +593,9 @@ document.getElementById("btn-copy").onclick=function(){
         setTimeout(function(){btn.innerHTML='\u003csvg width="15" height="15"\u003e\u003cuse href="#i-copy"/\u003e\u003c/svg\u003eCopy text'},2000);
       });
     } else {
-      toast("Copy not supported in this browser");
+      toast("Copy not supported");
     }
-  }
-  /* Show Monetag interstitial, then copy after ad closes/times-out */
-  try{
-    if(window.show_monetag){
-      window.show_monetag(12286498).then(doCopy).catch(doCopy);
-    } else if(window.showidX){
-      window.showidX(12286498);
-      setTimeout(doCopy,500);
-    } else {
-      doCopy();
-    }
-  } catch(e){ doCopy(); }
+  });
 };
 document.getElementById("btn-sumtxt").onclick=function(){var d=document.getElementById("s-date").value||(S.night?nightDefault():sumToday());window.open(sumPath()+d+"&format=text"+(effUser()?"&user="+encodeURIComponent(effUser()):"")+(document.getElementById("s-shift").value?"&shift="+encodeURIComponent(document.getElementById("s-shift").value):""),"_blank")};
 function applyLogin(){var u=effUser();var mgr=isMgr();var pill=document.getElementById("pill-user");if(mgr){pill.style.display="";pill.textContent="Manager - all QCs"}else if(u){pill.style.display="";pill.textContent="@"+u}else{pill.style.display="none"}document.getElementById("btn-logout").style.display="";var f=document.getElementById("f-user");if(f){if(u){f.value=u;f.setAttribute("disabled","disabled")}else{f.value="";f.removeAttribute("disabled")}}var bb=document.getElementById("btn-bulkdel");if(bb)bb.style.display=mgr?"":"none";if(u){document.getElementById("hero-title").textContent="@"+u+" - your QC work"}}
