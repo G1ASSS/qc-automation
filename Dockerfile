@@ -22,6 +22,7 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev --ignore-scripts || npm install --omit=dev --ignore-scripts
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY public ./public
 COPY scripts ./scripts
 EXPOSE 3000
 # Run migrations with a 30-second timeout so a suspended Neon DB never
